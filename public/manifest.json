@@ -1,0 +1,62 @@
+{
+  "name": "EarnScroll: Screen-Time Gym",
+  "short_name": "EarnScroll",
+  "description": "Transform your screen time into real life gains. Work out to unlock social media access with AI-powered exercise tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "productivity"],
+  "icons": [
+    {
+      "src": "/assets/images/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/adaptive-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/favicon.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Workout",
+      "short_name": "Workout",
+      "description": "Start a new workout session",
+      "url": "/workout",
+      "icons": [
+        {
+          "src": "/assets/images/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/assets/images/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

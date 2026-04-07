@@ -1,0 +1,74 @@
+{
+  "expo": {
+    "name": "EarnScroll: Screen-Time Gym",
+    "slug": "earnscroll-screen-time-gym",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "com.earnscroll.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "EarnScroll needs camera access to track your exercises in real-time",
+        "NSMotionUsageDescription": "EarnScroll uses motion data to enhance exercise tracking accuracy"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.earnscroll.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "android.permission.VIBRATE",
+        "android.permission.QUERY_ALL_PACKAGES",
+        "android.permission.PACKAGE_USAGE_STATS"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25",
+            "packagingOptions": {
+              "pickFirst": [
+                "lib/x86/libc++_shared.so",
+                "lib/x86_64/libc++_shared.so",
+                "lib/armeabi-v7a/libc++_shared.so",
+                "lib/arm64-v8a/libc++_shared.so"
+              ]
+            }
+          }
+        }
+      ],
+      "expo-router",
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your camera to track your workouts.",
+          "enableMicrophonePermission": false
+        }
+      ],
+      "expo-asset",
+      "./plugins/withAppBlocker",
+      "./plugins/withEarnScrollNative",
+      "expo-font"
+    ]
+  }
+}
