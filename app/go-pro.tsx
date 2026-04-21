@@ -1,11 +1,13 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, Dumbbell, TrendingUp, Calendar, Settings as SettingsIcon, X, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTimeBank } from '@/contexts/TimeBank';
+import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
+import { useAuth } from '@/contexts/Auth';
 import { cloudyGrey, industrialBackground, industrialCard } from '@/constants/colors';
+import { purchaseProduct, type ProductId } from '@/services/billing';
 
 const CLOUDY_GREY_RGB = '224, 229, 238';
 const cloudyGreyOpacity = (alpha: number): string => `rgba(${CLOUDY_GREY_RGB}, ${alpha})`;
@@ -17,15 +19,32 @@ const CLOUDY_GREY_15 = cloudyGreyOpacity(0.15);
 export default function GoProScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { toggleProStatus } = useTimeBank();
+  const { isDeveloperMode } = useTimeBank();
+  const { isGuest, isAuthenticated } = useAuth();
   const [selectedPlan, setSelectedPlan] = React.useState<'monthly' | 'annual' | 'lifetime'>('annual');
   const isAnnualSelected = selectedPlan === 'annual';
 
-  const handlePlanPurchase = async (planName: string) => {
-    console.log(`[GO PRO] User selected plan: ${planName}`);
-    await toggleProStatus();
-    console.log('[GO PRO] Pro status enabled (dev mode)');
-    router.push('/');
+  React.useEffect(() => {
+    if (FREE_LAUNCH_MODE) {
+      router.back();
+    }
+  }, [router]);
+
+  if (FREE_LAUNCH_MODE) return null;
+
+  // Guest users cannot go Pro (unless developer mode is on)
+  const canGoPro = (isAuthenticated && !isGuest) || isDeveloperMode;
+
+  const handlePlanPurchase = async (productId: ProductId) => {
+    console.log(`[GO PRO] User selected product: ${productId}`);
+    try {
+      await purchaseProduct(productId);
+      // On success the billing module / receipt validator will flip isUserPro.
+      router.back();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Purchase failed.';
+      Alert.alert('Purchase unavailable', message);
+    }
   };
 
   const proFeatures = [
@@ -54,6 +73,38 @@ export default function GoProScreen() {
       color: '#FFD700',
     },
   ];
+
+  if (!canGoPro) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }]}>
+          <TouchableOpacity
+            style={[styles.closeButton, { position: 'absolute', top: insets.top + 20, right: 20 }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <X size={28} color={cloudyGrey} />
+          </TouchableOpacity>
+
+          <View style={styles.crownContainer}>
+            <Crown size={64} color="#FFD700" fill="#FFD700" />
+          </View>
+          <Text style={[styles.title, { fontSize: 24 }]}>Account Required</Text>
+          <Text style={[styles.subtitle, { marginBottom: 24 }]}>
+            Create an account or sign in to unlock EarnScroll Pro and access all premium features.
+          </Text>
+          <TouchableOpacity
+            style={styles.guestSignInButton}
+            onPress={() => router.replace('/(auth)/login')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.guestSignInButtonText}>Create Account / Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -158,7 +209,7 @@ export default function GoProScreen() {
               ]}
               onPress={() => {
                 setSelectedPlan('monthly');
-                handlePlanPurchase('Monthly Plan (Intro Offer)');
+                handlePlanPurchase('pro_monthly');
               }}
               activeOpacity={0.8}
             >
@@ -171,7 +222,7 @@ export default function GoProScreen() {
               style={styles.planCardWrapper}
               onPress={() => {
                 setSelectedPlan('annual');
-                handlePlanPurchase('Annual Plan');
+                handlePlanPurchase('pro_annual');
               }}
               activeOpacity={0.9}
             >
@@ -206,7 +257,7 @@ export default function GoProScreen() {
               ]}
               onPress={() => {
                 setSelectedPlan('lifetime');
-                handlePlanPurchase('Lifetime Access');
+                handlePlanPurchase('pro_lifetime');
               }}
               activeOpacity={0.8}
             >
@@ -217,7 +268,7 @@ export default function GoProScreen() {
           </View>
 
           <Text style={styles.disclaimer}>
-            Note: This is a demo. Clicking any plan will activate Pro mode.
+            Subscriptions are processed and managed via Google Play.
           </Text>
         </ScrollView>
       </View>
@@ -465,5 +516,18 @@ const styles = StyleSheet.create({
     color: CLOUDY_GREY_45,
     textAlign: 'center',
     fontStyle: 'italic' as const,
+  },
+  guestSignInButton: {
+    backgroundColor: '#22D3EE',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    width: '100%',
+    alignItems: 'center',
+  },
+  guestSignInButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    color: '#000',
   },
 });

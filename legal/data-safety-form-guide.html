@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnScroll — Google Play Data Safety Form Guide</title>
+    <style>
+        :root {
+            --bg: #FAFAFA;
+            --fg: #1A1A2E;
+            --accent: #4F46E5;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+            --green: #059669;
+            --red: #DC2626;
+            --yellow: #D97706;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 40px;
+        }
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 48px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+        p, li {
+            margin-bottom: 12px;
+        }
+        ul, ol {
+            padding-left: 24px;
+            margin-bottom: 16px;
+        }
+        li { margin-bottom: 6px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        .yes { color: var(--green); font-weight: 600; }
+        .no { color: var(--red); font-weight: 600; }
+        .na { color: var(--muted); font-weight: 600; }
+        .note { color: var(--yellow); font-weight: 600; }
+        .highlight {
+            background: #EFF6FF;
+            border-left: 4px solid var(--accent);
+            padding: 14px 18px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        .warning {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 14px 18px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        .critical {
+            background: #FEE2E2;
+            border-left: 4px solid #EF4444;
+            padding: 14px 18px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .answer-box {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 6px;
+            padding: 14px 18px;
+            margin: 12px 0 20px;
+            font-size: 0.95rem;
+        }
+        .answer-box strong { color: var(--green); }
+        code {
+            background: #F3F4F6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        .footer {
+            margin-top: 60px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>Data Safety Form Guide</h1>
+<p class="subtitle">A field-by-field reference for filling out EarnScroll's Google Play Console Data Safety section.<br>Prepared: April 21, 2026</p>
+
+<div class="highlight">
+    <strong>How to use this guide:</strong> Open Google Play Console → select EarnScroll → App content → Data safety. Walk through each question in the form and refer to the corresponding section below for the correct answer. Every answer here is based on an audit of the actual EarnScroll codebase.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 1: Overview Questions</h2>
+
+<h3>Q: Does your app collect or share any of the required user data types?</h3>
+<div class="answer-box">
+    <strong>Answer: Yes</strong><br>
+    EarnScroll collects user data (email, phone for authentication) and stores app activity data locally on the device.
+</div>
+
+<h3>Q: Does your app share any of the required user data types with third parties?</h3>
+<div class="answer-box">
+    <strong>Answer: Yes</strong><br>
+    Authentication data (email, phone, OAuth tokens) is shared with Supabase (our authentication backend). Font requests are sent to Google Fonts.
+</div>
+
+<h3>Q: Is all of the user data collected by your app encrypted in transit?</h3>
+<div class="answer-box">
+    <strong>Answer: Yes</strong><br>
+    All network communication uses HTTPS/TLS (Supabase API, Google OAuth, Apple Sign In, Google Fonts CDN).
+</div>
+
+<h3>Q: Do you provide a way for users to request that their data is deleted?</h3>
+<div class="answer-box">
+    <strong>Answer: Yes</strong><br>
+    Users can: (1) clear all local data via device settings, (2) request account deletion by emailing virajsonib901@gmail.com. Include your account deletion URL/instructions here.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 2: Data Types — Complete Checklist</h2>
+
+<p>Below is every data type category in the Data Safety Form. For each, the correct declaration for EarnScroll is provided.</p>
+
+<h3>Location</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Approximate location</td><td class="no">No</td><td class="no">No</td><td>App does not request location permissions</td></tr>
+    <tr><td>Precise location</td><td class="no">No</td><td class="no">No</td><td>App does not request location permissions</td></tr>
+</table>
+
+<h3>Personal info</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Name</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Collected via Apple Sign In (if user shares it). Shared with Supabase.</td></tr>
+    <tr><td>Email address</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Collected for account registration. Shared with Supabase.</td></tr>
+    <tr><td>User IDs</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Generated by Supabase on account creation. Stored locally + on Supabase.</td></tr>
+    <tr><td>Address</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Phone number</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Collected for SMS OTP sign-in (optional). Shared with Supabase.</td></tr>
+    <tr><td>Race and ethnicity</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Political or religious beliefs</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Sexual orientation</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Other info</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Financial info</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>User payment info</td><td class="no">No</td><td class="no">No</td><td>Payments handled entirely by Google Play Billing. We never see card/bank data.</td></tr>
+    <tr><td>Purchase history</td><td class="no">No</td><td class="no">No</td><td>Billing not yet integrated. When integrated, Google Play Billing handles this — exempt from declaration per Google's guidance.</td></tr>
+    <tr><td>Credit score</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Other financial info</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<div class="warning">
+    <strong>Note:</strong> When you integrate Google Play Billing for the Pro tier, revisit this section. If you store purchase receipts or subscription status locally (which you currently do via SecureStore <code>@is_user_pro</code>), you may need to declare "Purchase history" as collected. Google Play Billing's own data collection is exempt, but your local record of subscription status may need declaration.
+</div>
+
+<h3>Health and fitness</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Health info</td><td class="no">No</td><td class="no">No</td><td>App does not collect medical or health data</td></tr>
+    <tr><td>Fitness info</td><td class="yes">Yes</td><td class="no">No</td><td>Exercise rep counts and workout history stored on-device only. Not transmitted.</td></tr>
+</table>
+
+<div class="answer-box">
+    <strong>For "Fitness info" — additional fields:</strong><br>
+    • Is this data collected, shared, or both? → <strong>Collected</strong><br>
+    • Is this data processed ephemerally? → <strong>No</strong> (it's persisted locally)<br>
+    • Is this data required or can users choose whether it's collected? → <strong>Required</strong> (core functionality)<br>
+    • Why is this data collected? → <strong>App functionality</strong> (tracking exercises to earn screen time)
+</div>
+
+<h3>Messages</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Emails</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>SMS or MMS</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Other in-app messages</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Photos and videos</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Photos</td><td class="no">No</td><td class="no">No</td><td>Camera frames processed in-memory only, never stored</td></tr>
+    <tr><td>Videos</td><td class="no">No</td><td class="no">No</td><td>No video recording — real-time frame processing only</td></tr>
+</table>
+
+<div class="highlight">
+    <strong>Why "No" for photos/videos?</strong> Google's Data Safety guidance states that data processed ephemerally in memory and never persisted to storage or transmitted off-device does not need to be declared as "collected." EarnScroll's camera frames are processed by TensorFlow Lite on-device in real time, and the frames are immediately discarded after extracting pose keypoints. No photos or videos are ever saved to disk or sent anywhere.
+</div>
+
+<h3>Audio</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Voice or sound recordings</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Music files</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Other audio files</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Files and docs</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Files and docs</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Calendar</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Calendar events</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Contacts</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Contacts</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>App activity</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>App interactions</td><td class="yes">Yes</td><td class="no">No</td><td>Accessibility service monitors foreground app (package name only). Stored on-device in encrypted storage.</td></tr>
+    <tr><td>In-app search history</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Installed apps</td><td class="yes">Yes</td><td class="no">No</td><td>List of installed apps queried for the block-list selection UI. Not transmitted.</td></tr>
+    <tr><td>Other user-generated content</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+    <tr><td>Other actions</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<div class="answer-box">
+    <strong>For "App interactions" — additional fields:</strong><br>
+    • Is this data collected, shared, or both? → <strong>Collected</strong><br>
+    • Is this data processed ephemerally? → <strong>No</strong> (blocked app list is persisted)<br>
+    • Is this data required or optional? → <strong>Optional</strong> (user chooses to enable app blocking)<br>
+    • Why is this data collected? → <strong>App functionality</strong> (enforce app blocking when time bank is empty)
+</div>
+
+<div class="answer-box">
+    <strong>For "Installed apps" — additional fields:</strong><br>
+    • Is this data collected, shared, or both? → <strong>Collected</strong><br>
+    • Is this data processed ephemerally? → <strong>Yes</strong> (list is queried on-demand for the UI, user's selected apps are persisted but the full list is not)<br>
+    • Is this data required or optional? → <strong>Optional</strong> (only accessed if user uses app-blocking feature)<br>
+    • Why is this data collected? → <strong>App functionality</strong> (display apps for user to select which to block)
+</div>
+
+<h3>Web browsing</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Web browsing history</td><td class="no">No</td><td class="no">No</td><td>—</td></tr>
+</table>
+
+<h3>Device or other IDs</h3>
+<table>
+    <tr><th>Data Type</th><th>Collected?</th><th>Shared?</th><th>Notes</th></tr>
+    <tr><td>Device or other IDs</td><td class="yes">Yes</td><td class="no">No</td><td>A device-unique UUID is generated for HMAC signing of local data. Stored in SecureStore on-device only. Never transmitted.</td></tr>
+</table>
+
+<div class="answer-box">
+    <strong>For "Device or other IDs" — additional fields:</strong><br>
+    • Is this data collected, shared, or both? → <strong>Collected</strong><br>
+    • Is this data processed ephemerally? → <strong>No</strong> (persisted in secure storage)<br>
+    • Is this data required or optional? → <strong>Required</strong> (used for data integrity verification)<br>
+    • Why is this data collected? → <strong>App functionality, Security</strong> (HMAC-based tamper detection for time bank data)
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 3: Data Handling Details</h2>
+
+<p>For each data type you declared as "collected," the form asks follow-up questions. Here are the answers:</p>
+
+<h3>Personal info (Name, Email, Phone, User IDs)</h3>
+<table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Is this data collected, shared, or both?</td><td><strong>Both</strong> — collected from user AND shared with Supabase</td></tr>
+    <tr><td>Is this data processed ephemerally?</td><td><strong>No</strong> — stored persistently on Supabase servers</td></tr>
+    <tr><td>Is this data required or can users choose?</td><td><strong>Optional</strong> — Guest Mode available without any personal info</td></tr>
+    <tr><td>Why is this data collected?</td><td><strong>Account management, Authentication</strong></td></tr>
+</table>
+
+<h3>Fitness info (Workout history, rep counts)</h3>
+<table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Is this data collected, shared, or both?</td><td><strong>Collected only</strong> — never shared with third parties</td></tr>
+    <tr><td>Is this data processed ephemerally?</td><td><strong>No</strong> — persisted locally for up to 365 days</td></tr>
+    <tr><td>Is this data required or can users choose?</td><td><strong>Required</strong> — core functionality of the app</td></tr>
+    <tr><td>Why is this data collected?</td><td><strong>App functionality</strong></td></tr>
+</table>
+
+<h3>App interactions (Accessibility service — foreground app detection)</h3>
+<table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Is this data collected, shared, or both?</td><td><strong>Collected only</strong> — never transmitted off-device</td></tr>
+    <tr><td>Is this data processed ephemerally?</td><td><strong>Partially</strong> — foreground app checks are ephemeral; blocked app list is persisted</td></tr>
+    <tr><td>Is this data required or can users choose?</td><td><strong>Optional</strong> — user must opt in to app blocking</td></tr>
+    <tr><td>Why is this data collected?</td><td><strong>App functionality</strong></td></tr>
+</table>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 4: AccessibilityService Declaration</h2>
+
+<div class="critical">
+    <strong>CRITICAL:</strong> This is a separate form in Play Console under App content → Permissions and APIs → AccessibilityService declaration. You MUST complete this or your app will be rejected.
+</div>
+
+<h3>Q: Does your app use the AccessibilityService API?</h3>
+<div class="answer-box"><strong>Answer: Yes</strong></div>
+
+<h3>Q: Describe the core functionality that uses AccessibilityService</h3>
+<div class="answer-box">
+    <strong>Answer:</strong> "EarnScroll uses the AccessibilityService API to implement a screen-time management feature. When a user's earned time bank is depleted (reaching zero minutes), the accessibility service detects when the user opens an app from their personal block list and displays a full-screen overlay encouraging the user to earn more time through physical exercise. The service only reads the package name of the foreground application to compare against the user's block list. It does not read screen content, text fields, passwords, notifications, or any other on-screen data. All data remains on the user's device and is never transmitted to external servers."
+</div>
+
+<h3>Q: Is your app an accessibility tool (isAccessibilityTool)?</h3>
+<div class="answer-box">
+    <strong>Answer: No</strong><br>
+    EarnScroll is not an assistive tool for users with disabilities. The AccessibilityService is used for screen-time management functionality.
+</div>
+
+<h3>Q: Link to your prominent in-app disclosure</h3>
+<div class="answer-box">
+    <strong>Answer:</strong> Provide a screenshot or video of your in-app disclosure dialog that:
+    <ol>
+        <li>Appears BEFORE the user is prompted to enable the accessibility service</li>
+        <li>Clearly explains what data is accessed (foreground app package name only)</li>
+        <li>Explains the purpose (app blocking when time runs out)</li>
+        <li>States that data is not transmitted off-device</li>
+        <li>Requires affirmative user action (e.g., "I Understand" button)</li>
+    </ol>
+</div>
+
+<div class="warning">
+    <strong>Reminder:</strong> The prominent disclosure MUST be shown within the app during normal usage — NOT buried in settings, NOT only in the Privacy Policy or Terms of Service, and NOT combined with other consent dialogs. It must be a standalone, focused disclosure specifically about the accessibility service.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 5: Security Practices</h2>
+
+<h3>Q: Is all of the user data collected by your app encrypted in transit?</h3>
+<div class="answer-box"><strong>Answer: Yes</strong> — All network requests use HTTPS (TLS 1.2+)</div>
+
+<h3>Q: Do you provide a way for users to request that their data is deleted?</h3>
+<div class="answer-box">
+    <strong>Answer: Yes</strong><br>
+    • Local data: Users can clear app data via Android Settings → Apps → EarnScroll → Storage → Clear Data<br>
+    • Account data: Users can request account deletion via email (virajsonib901@gmail.com)<br>
+    • <strong>Important:</strong> Google now requires a data deletion URL or instructions. Provide a web page or in-app flow for account deletion.
+</div>
+
+<h3>Q: Has your app been independently security reviewed?</h3>
+<div class="answer-box"><strong>Answer: No</strong> (optional field — leave unchecked unless you've completed MASA or similar certification)</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 6: Families Policy</h2>
+
+<h3>Q: Is your app directed at children or does it target children as an audience?</h3>
+<div class="answer-box">
+    <strong>Answer: No</strong><br>
+    EarnScroll requires users to be at least 13 years old (per Terms of Service). The app is not part of the Designed for Families program.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Section 7: Third-Party SDK Disclosures</h2>
+
+<p>List every third-party service that processes user data:</p>
+
+<table>
+    <tr><th>SDK / Service</th><th>Data It Processes</th><th>Purpose</th><th>Privacy Policy Link</th></tr>
+    <tr>
+        <td>Supabase</td>
+        <td>Email, phone, name, user IDs, session tokens</td>
+        <td>User authentication and session management</td>
+        <td><a href="https://supabase.com/privacy">supabase.com/privacy</a></td>
+    </tr>
+    <tr>
+        <td>Google Sign-In (OAuth)</td>
+        <td>Google account email, OAuth tokens</td>
+        <td>Third-party authentication</td>
+        <td><a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td>
+    </tr>
+    <tr>
+        <td>Apple Sign In</td>
+        <td>Apple ID email (or relay), name (if shared)</td>
+        <td>Third-party authentication</td>
+        <td><a href="https://www.apple.com/legal/privacy/">apple.com/legal/privacy</a></td>
+    </tr>
+    <tr>
+        <td>Google Fonts</td>
+        <td>IP address, user-agent string</td>
+        <td>Font loading for UI typography</td>
+        <td><a href="https://developers.google.com/fonts/faq/privacy">Google Fonts Privacy FAQ</a></td>
+    </tr>
+    <tr>
+        <td>Expo</td>
+        <td>Minimal device/build telemetry (OS version, architecture)</td>
+        <td>Framework runtime compatibility</td>
+        <td><a href="https://expo.dev/privacy">expo.dev/privacy</a></td>
+    </tr>
+</table>
+
+<div class="highlight">
+    <strong>SDKs that do NOT collect data (no declaration needed):</strong>
+    TensorFlow Lite (fully on-device), React Native Vision Camera (no telemetry), React Native Reanimated, React Native Gesture Handler, AsyncStorage, Expo SecureStore, Zod, Lucide icons, react-native-calendars, react-native-confetti-cannon, react-native-svg.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Summary: What Your Data Safety Section Will Show Users</h2>
+
+<p>Based on the declarations above, users will see the following on your Play Store listing:</p>
+
+<div class="answer-box" style="background: #fff; border-color: var(--border);">
+    <h3 style="margin-top: 0;">Data Safety</h3>
+    <p><strong>Data shared with third parties:</strong></p>
+    <ul>
+        <li>Personal info (name, email, phone, user IDs) — shared with authentication provider for account management</li>
+    </ul>
+    <p><strong>Data collected:</strong></p>
+    <ul>
+        <li>Personal info (name, email, phone, user IDs)</li>
+        <li>Health and fitness (fitness info)</li>
+        <li>App activity (app interactions, installed apps)</li>
+        <li>Device or other IDs</li>
+    </ul>
+    <p><strong>Security practices:</strong></p>
+    <ul>
+        <li>Data is encrypted in transit</li>
+        <li>You can request that data be deleted</li>
+    </ul>
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>Pre-Submission Checklist</h2>
+
+<ol>
+    <li><strong>Privacy Policy URL</strong> — host <code>privacy-policy.html</code> at a public, accessible URL (not a PDF, not geo-fenced). Enter this URL in Play Console under Store listing → Privacy policy.</li>
+    <li><strong>In-app Privacy Policy link</strong> — ensure the Privacy Policy is accessible from within the app (settings screen recommended).</li>
+    <li><strong>Accessibility Service disclosure</strong> — implement a prominent in-app dialog shown before requesting the permission. Take a screenshot for the Play Console declaration.</li>
+    <li><strong>Account deletion mechanism</strong> — provide a clear way for users to request account deletion (email or in-app flow). Enter the deletion URL/instructions in Play Console.</li>
+    <li><strong>Cross-check consistency</strong> — verify every data type declared here matches what's described in the Privacy Policy. No contradictions.</li>
+    <li><strong>Test all URLs</strong> — privacy policy, terms of service, and any links in those documents must be live and accessible.</li>
+</ol>
+
+<div class="footer">
+    <p>This guide is based on an audit of the EarnScroll codebase as of April 21, 2026. Update this document whenever you add new SDKs, permissions, or data collection practices.</p>
+    <p>&copy; 2026 EarnScroll. Internal reference document.</p>
+</div>
+
+</div>
+</body>
+</html>

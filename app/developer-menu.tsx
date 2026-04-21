@@ -1,13 +1,24 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Code, Database, Info, Trash2, Crown, RefreshCcw, X } from 'lucide-react-native';
-import { useTimeBank } from '@/contexts/TimeBank';
+import { Code, Database, Info, Trash2, Crown, RefreshCcw, X, Clock } from 'lucide-react-native';
+import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
 import { useRouter, Stack } from 'expo-router';
 
+const EMERGENCY_MINUTES_OPTIONS = [1, 3, 5, 10, 15, 30];
+
 export default function DeveloperMenuScreen() {
-  const { generateMockWorkoutHistory, clearAllWorkoutHistory, toggleProStatus, isUserPro, resetOnboarding } = useTimeBank();
+  const { generateMockWorkoutHistory, clearAllWorkoutHistory, toggleProStatus, isUserPro, resetOnboarding, disableDeveloperMode, emergencyPauseMinutes, updateEmergencyPauseMinutes } = useTimeBank();
   const router = useRouter();
+
+  // Defense in depth: developer menu is unreachable in launch mode, even via deep link.
+  useEffect(() => {
+    if (FREE_LAUNCH_MODE) {
+      router.replace('/(tabs)');
+    }
+  }, [router]);
+
+  if (FREE_LAUNCH_MODE) return null;
 
   const handlePopulate30Days = async () => {
     try {
@@ -19,7 +30,7 @@ export default function DeveloperMenuScreen() {
           {
             text: 'OK',
             onPress: () => {
-              router.push('/(tabs)');
+              router.replace('/(tabs)');
             },
           },
         ]
@@ -40,7 +51,7 @@ export default function DeveloperMenuScreen() {
         if (typeof window !== 'undefined') {
           window.alert('All workout history has been deleted. Redirecting to Dashboard...');
         }
-        router.push('/(tabs)');
+        router.replace('/(tabs)');
         return;
       }
 
@@ -57,7 +68,7 @@ export default function DeveloperMenuScreen() {
                 console.log('[DEV MENU] Clear history confirmed (native)');
                 await clearAllWorkoutHistory();
                 Alert.alert('Cleared!', 'All workout history has been deleted. Navigating to Dashboard...', [
-                  { text: 'OK', onPress: () => router.push('/(tabs)') },
+                  { text: 'OK', onPress: () => router.replace('/(tabs)') },
                 ]);
               } catch (error) {
                 console.error('Failed to clear history:', error);
@@ -174,6 +185,45 @@ export default function DeveloperMenuScreen() {
 
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
+              <Clock size={20} color="#FF9800" />
+              <Text style={styles.sectionTitle}>Emergency Access</Text>
+            </View>
+            <Text style={styles.emergencySubtitle}>
+              Minutes granted per emergency pause (current: {emergencyPauseMinutes}min)
+            </Text>
+
+            <View style={styles.emergencyOptionsRow}>
+              {EMERGENCY_MINUTES_OPTIONS.map((mins) => (
+                <TouchableOpacity
+                  key={mins}
+                  style={[
+                    styles.emergencyOption,
+                    emergencyPauseMinutes === mins && styles.emergencyOptionActive,
+                  ]}
+                  onPress={() => updateEmergencyPauseMinutes(mins)}
+                >
+                  <Text style={[
+                    styles.emergencyOptionText,
+                    emergencyPauseMinutes === mins && styles.emergencyOptionTextActive,
+                  ]}>
+                    {mins}m
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.infoCard}>
+              <View style={styles.infoHeader}>
+                <Info size={18} color="#00D9FF" />
+                <Text style={styles.infoTitle}>How it works:</Text>
+              </View>
+              <Text style={styles.infoText}>• Each emergency pause adds this many minutes to your Time Bank</Text>
+              <Text style={styles.infoText}>• Non-dev users get 3 pauses per day; dev mode gives unlimited</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
               <Database size={20} color="#4CAF50" />
               <Text style={styles.sectionTitle}>Mock Data Generation</Text>
             </View>
@@ -217,11 +267,11 @@ export default function DeveloperMenuScreen() {
                 if (Platform.OS === 'web') {
                   const confirmed = typeof window !== 'undefined' ? window.confirm('This will disable Developer Mode and hide all developer tools. You can re-enable it by tapping the version number 7 times in Settings.') : true;
                   if (!confirmed) return;
-                  await AsyncStorage.setItem('@developer_mode', 'false');
+                  await disableDeveloperMode();
                   if (typeof window !== 'undefined') {
                     window.alert('Developer Mode disabled. Returning to Settings...');
                   }
-                  router.push('/settings');
+                  router.back();
                   return;
                 }
 
@@ -235,9 +285,9 @@ export default function DeveloperMenuScreen() {
                       style: 'destructive',
                       onPress: async () => {
                         try {
-                          await AsyncStorage.setItem('@developer_mode', 'false');
+                          await disableDeveloperMode();
                           Alert.alert('Developer Mode Disabled', 'Returning to Settings...', [
-                            { text: 'OK', onPress: () => router.push('/settings') },
+                            { text: 'OK', onPress: () => router.back() },
                           ]);
                         } catch (error) {
                           console.error('Failed to disable developer mode:', error);
@@ -445,5 +495,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     flex: 1,
+  },
+  emergencySubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 16,
+  },
+  emergencyOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  emergencyOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 152, 0, 0.3)',
+  },
+  emergencyOptionActive: {
+    backgroundColor: 'rgba(255, 152, 0, 0.35)',
+    borderColor: '#FF9800',
+  },
+  emergencyOptionText: {
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  emergencyOptionTextActive: {
+    color: '#FF9800',
   },
 });

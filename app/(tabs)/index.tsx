@@ -1,12 +1,20 @@
-import { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, ScrollView, Alert, Modal, Platform } from "react-native";
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, ScrollView, Alert, Modal, Platform, NativeModules, AppState } from "react-native";
 import { Calendar, DateData } from 'react-native-calendars';
-import { Zap, TrendingUp, Flame, ShieldAlert, X, Dumbbell, Activity, Crown, Lock, Settings } from 'lucide-react-native';
+import { Zap, TrendingUp, Flame, ShieldAlert, X, Dumbbell, Activity, Crown, Lock, Settings, Clock, Smartphone } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTimeBank, DailyWorkout } from '@/contexts/TimeBank';
 import { useTheme } from '@/contexts/Theme';
 import { cloudyGrey } from '@/constants/colors';
+
+const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
+
+type AppUsageEntry = {
+  package: string;
+  label: string;
+  minutesUsed: number;
+};
 
 const CLOUDY_GREY_RGB = '224, 229, 238';
 const cloudyGreyOpacity = (alpha: number): string => `rgba(${CLOUDY_GREY_RGB}, ${alpha})`;
@@ -14,7 +22,7 @@ const CLOUDY_GREY_70 = cloudyGreyOpacity(0.7);
 const CLOUDY_GREY_60 = cloudyGreyOpacity(0.6);
 
 export default function DashboardScreen() {
-  const { earnedMinutes, isLoading, resetTimeBank, currentStreak, emergencyPausesRemaining, triggerEmergencyPause, workoutHistory, isUserPro, isDeveloperMode } = useTimeBank();
+  const { earnedMinutes, earningRatios, isLoading, resetTimeBank, currentStreak, emergencyPausesRemaining, triggerEmergencyPause, workoutHistory, isUserPro, isDeveloperMode } = useTimeBank();
   const themeContext = useTheme();
   const theme = themeContext?.theme ?? {
     background: '#F8FAFC',
@@ -41,11 +49,51 @@ export default function DashboardScreen() {
   const [isUsingEmergency, setIsUsingEmergency] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isEmergencySheetVisible, setIsEmergencySheetVisible] = useState<boolean>(false);
+  const [appUsageToday, setAppUsageToday] = useState<AppUsageEntry[]>([]);
   const calendarKey = useMemo(() => `cal-${Object.keys(workoutHistory).length}-${Object.keys(workoutHistory)[0] ?? 'empty'}`,[workoutHistory]);
 
+  // Calculate today's earned minutes from workout history using earning ratios
+  const todayEarned = useMemo(() => {
+    const todayKey = new Date().toISOString().split('T')[0];
+    const todayWorkout = workoutHistory[todayKey];
+    if (!todayWorkout) return 0;
+    const squatRatio = isUserPro ? earningRatios.squats : 1;
+    const pushupRatio = isUserPro ? earningRatios.pushups : 1;
+    const plankRatio = isUserPro ? earningRatios.planks : 3;
+    return Math.round(
+      todayWorkout.squats * squatRatio +
+      todayWorkout.pushups * pushupRatio +
+      Math.floor(todayWorkout.plank / plankRatio)
+    );
+  }, [workoutHistory, earningRatios, isUserPro]);
+
+  // Fetch app usage stats
+  const fetchAppUsage = useCallback(async () => {
+    if (!EarnScrollModule?.getAppUsageToday) return;
+    try {
+      const usage: AppUsageEntry[] = await EarnScrollModule.getAppUsageToday();
+      // Sort by most used first and filter out negligible usage
+      const filtered = usage
+        .filter((a: AppUsageEntry) => a.minutesUsed >= 0.5)
+        .sort((a: AppUsageEntry, b: AppUsageEntry) => b.minutesUsed - a.minutesUsed);
+      setAppUsageToday(filtered);
+    } catch {
+      // Usage stats may not be available
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAppUsage();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') fetchAppUsage();
+    });
+    return () => sub.remove();
+  }, [fetchAppUsage]);
+
   const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
+    const totalMins = Math.round(minutes);
+    const hours = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
     if (hours === 0) return `${mins}m`;
     if (mins === 0) return `${hours}h`;
     return `${hours}h ${mins}m`;
@@ -216,7 +264,7 @@ export default function DashboardScreen() {
         <View style={styles.stats}>
           <View style={styles.statItem}>
             <Zap size={20} color="#FFD700" />
-            <Text style={[styles.statValue, { color: theme.text }]}>{earnedMinutes}</Text>
+            <Text style={[styles.statValue, { color: theme.text }]}>{Math.round(earnedMinutes)}</Text>
             <Text style={styles.statLabel}>Minutes</Text>
           </View>
           <View style={styles.divider} />
@@ -226,6 +274,51 @@ export default function DashboardScreen() {
             <Text style={styles.statLabel}>Hours</Text>
           </View>
         </View>
+      </View>
+
+      {/* Today's Activity Card */}
+      <View style={[styles.todayCard, { backgroundColor: theme.card }]}>
+        <View style={styles.todayHeader}>
+          <Clock size={22} color="#22D3EE" />
+          <Text style={[styles.todayTitle, { color: theme.text }]}>Today's Activity</Text>
+        </View>
+
+        <View style={styles.todayStatsRow}>
+          <View style={[styles.todayStat, { backgroundColor: theme.isDark ? 'rgba(34, 211, 238, 0.08)' : '#F0FDFA' }]}>
+            <Zap size={18} color="#22D3EE" />
+            <Text style={[styles.todayStatValue, { color: theme.isDark ? '#22D3EE' : '#0891B2' }]}>{todayEarned}</Text>
+            <Text style={[styles.todayStatLabel, { color: theme.textSecondary }]}>Min Earned</Text>
+          </View>
+          <View style={[styles.todayStat, { backgroundColor: theme.isDark ? 'rgba(239, 68, 68, 0.08)' : '#FFF1F2' }]}>
+            <Smartphone size={18} color="#EF4444" />
+            <Text style={[styles.todayStatValue, { color: theme.isDark ? '#F87171' : '#DC2626' }]}>
+              {appUsageToday.length > 0 ? Math.round(appUsageToday.reduce((sum, a) => sum + a.minutesUsed, 0)) : 0}
+            </Text>
+            <Text style={[styles.todayStatLabel, { color: theme.textSecondary }]}>Min Used</Text>
+          </View>
+        </View>
+
+        {appUsageToday.length > 0 && (
+          <View style={styles.appUsageList}>
+            <Text style={[styles.appUsageHeader, { color: theme.textSecondary }]}>Screen Time by App</Text>
+            {appUsageToday.slice(0, 5).map((app) => (
+              <View key={app.package} style={[styles.appUsageRow, { borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]}>
+                <Text style={[styles.appUsageName, { color: theme.text }]} numberOfLines={1}>{app.label}</Text>
+                <Text style={[styles.appUsageTime, { color: theme.textSecondary }]}>
+                  {app.minutesUsed >= 60
+                    ? `${Math.floor(app.minutesUsed / 60)}h ${Math.round(app.minutesUsed % 60)}m`
+                    : `${Math.round(app.minutesUsed)}m`}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {appUsageToday.length === 0 && Platform.OS !== 'web' && (
+          <Text style={[styles.todayEmptyText, { color: theme.textSecondary }]}>
+            No tracked app usage today
+          </Text>
+        )}
       </View>
 
       <View style={[styles.streakCard, { backgroundColor: theme.card }]}>
@@ -662,6 +755,83 @@ const styles = StyleSheet.create({
     width: 1,
     height: 60,
     backgroundColor: '#e0e0e0',
+  },
+  todayCard: {
+    marginHorizontal: 20,
+    marginTop: 24,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  todayTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+  },
+  todayStatsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  todayStat: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  todayStatValue: {
+    fontSize: 28,
+    fontFamily: 'SpaceMono_700Bold',
+  },
+  todayStatLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  appUsageList: {
+    marginTop: 16,
+  },
+  appUsageHeader: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  appUsageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  appUsageName: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    flex: 1,
+    marginRight: 12,
+  },
+  appUsageTime: {
+    fontSize: 14,
+    fontFamily: 'SpaceMono_700Bold',
+  },
+  todayEmptyText: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginTop: 12,
   },
   streakCard: {
     marginHorizontal: 20,

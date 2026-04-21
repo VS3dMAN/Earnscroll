@@ -399,7 +399,7 @@ const handlePlanPurchase = async (planName: string) => {
 **Why demo mode?**
 - No actual payment integration needed for MVP
 - Allows full testing of Pro features
-- Future: Replace with RevenueCat or similar
+- Future: Replace with Google Play Billing (see services/billing.ts stub)
 
 ### Visual Design
 
@@ -633,7 +633,7 @@ const isUserPro = user?.subscriptionStatus === 'active';
 ```
 
 **Required for production**:
-- RevenueCat / App Store / Play Store integration
+- Google Play Billing integration (Play Store)
 - Server validates receipt
 - Client receives verified status
 - Prevent tampering

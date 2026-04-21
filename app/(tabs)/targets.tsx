@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, LayoutChangeEvent, StyleSheet, Text, TextInput, TouchableOpacity, View, NativeModules, Platform } from 'react-native';
+import { Alert, FlatList, LayoutChangeEvent, StyleSheet, Text, TextInput, TouchableOpacity, View, NativeModules, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/Theme';
@@ -76,16 +76,39 @@ export default function TargetsScreen() {
     []
   );
 
-  const toggleTarget = useCallback((pkg: string) => {
-    setLockedTargets((prev) => {
-      const isLocked = prev.includes(pkg);
-      const next = isLocked ? prev.filter((p) => p !== pkg) : [...prev, pkg];
+  const toggleTarget = useCallback(async (pkg: string) => {
+    const isCurrentlyLocked = lockedTargets.includes(pkg);
 
+    // When blocking (not unblocking), check if accessibility service is enabled
+    if (!isCurrentlyLocked && Platform.OS === 'android' && EarnScrollModule?.isAccessibilityServiceEnabled) {
+      try {
+        const enabled = await EarnScrollModule.isAccessibilityServiceEnabled();
+        if (!enabled) {
+          Alert.alert(
+            'Enable App Blocker',
+            'EarnScroll needs accessibility access to block distracting apps when your time runs out. Please enable "EarnScroll" in the next screen.',
+            [
+              { text: 'Later', style: 'cancel' },
+              {
+                text: 'Open Settings',
+                onPress: () => EarnScrollModule.openAccessibilitySettings(),
+              },
+            ]
+          );
+          return; // Don't toggle until permission is granted
+        }
+      } catch {
+        // Native module error, proceed with toggle
+      }
+    }
+
+    setLockedTargets((prev) => {
+      const next = isCurrentlyLocked ? prev.filter((p) => p !== pkg) : [...prev, pkg];
       console.log("TOGGLE: " + pkg + " | New List: " + JSON.stringify(next));
       updateNativeBlocker(next);
       return next;
     });
-  }, [updateNativeBlocker]);
+  }, [updateNativeBlocker, lockedTargets]);
 
   const data = useMemo(() => {
     const q = normalizeQuery(searchQuery);

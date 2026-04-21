@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnScroll — Privacy Policy</title>
+    <style>
+        :root {
+            --bg: #FAFAFA;
+            --fg: #1A1A2E;
+            --accent: #4F46E5;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+            --section-bg: #FFFFFF;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .effective-date {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 40px;
+        }
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 40px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+        p, li {
+            margin-bottom: 12px;
+        }
+        ul, ol {
+            padding-left: 24px;
+            margin-bottom: 16px;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            font-size: 0.95rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: left;
+        }
+        th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        .highlight {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 14px 18px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .footer {
+            margin-top: 60px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>Privacy Policy</h1>
+<p class="effective-date">Effective Date: April 21, 2026 &nbsp;|&nbsp; Last Updated: April 21, 2026</p>
+
+<p>EarnScroll ("we," "us," or "our") operates the EarnScroll mobile application (the "App"). This Privacy Policy explains how we collect, use, store, and protect your information when you use the App. By using EarnScroll, you agree to the practices described in this policy.</p>
+
+<p>We are committed to transparency and your privacy. We designed EarnScroll to keep most of your data on your device, and we do not sell your personal information to anyone.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>1. Information We Collect</h2>
+
+<p>We collect information in two ways: information you provide directly to us, and information collected automatically by the App.</p>
+
+<h3>1.1 Information You Provide</h3>
+
+<table>
+    <tr><th>Data</th><th>When Collected</th><th>Purpose</th></tr>
+    <tr><td>Email address</td><td>Account registration or sign-in</td><td>Authentication, password reset, account communications</td></tr>
+    <tr><td>Phone number</td><td>SMS/OTP sign-in (optional method)</td><td>Account verification via one-time passcode</td></tr>
+    <tr><td>Name</td><td>Sign in with Apple (if you choose to share it)</td><td>Account personalization</td></tr>
+    <tr><td>Google or Apple account identifiers</td><td>OAuth sign-in</td><td>Third-party authentication</td></tr>
+</table>
+
+<p>You may also choose to use the App in <strong>Guest Mode</strong> without creating an account. In Guest Mode, no personal identifiers are collected or transmitted.</p>
+
+<h3>1.2 Information Collected Automatically</h3>
+
+<table>
+    <tr><th>Data</th><th>Storage Location</th><th>Purpose</th></tr>
+    <tr><td>Earned screen-time minutes</td><td>Device only (encrypted)</td><td>Core time-bank functionality</td></tr>
+    <tr><td>Workout history (exercise type, rep counts, dates)</td><td>Device only (integrity-signed)</td><td>Progress tracking, streak calculation</td></tr>
+    <tr><td>Workout streak (consecutive days)</td><td>Device only</td><td>Motivational feature</td></tr>
+    <tr><td>Exercise earning ratios</td><td>Device only (integrity-signed)</td><td>Personalized time-earning rates</td></tr>
+    <tr><td>App preferences (theme, onboarding status, free exercise choice)</td><td>Device only</td><td>User experience</td></tr>
+    <tr><td>List of installed apps &amp; daily app usage statistics</td><td>Device only (encrypted)</td><td>App-blocking feature</td></tr>
+    <tr><td>List of apps you choose to block</td><td>Device only (encrypted)</td><td>App-blocking feature</td></tr>
+    <tr><td>Session tokens</td><td>Device only</td><td>Keeping you signed in</td></tr>
+    <tr><td>Device-unique identifier (UUID)</td><td>Device only (secure keychain)</td><td>HMAC-based integrity verification of time-bank data</td></tr>
+</table>
+
+<!-- ───────────────────────────────────────── -->
+<h2>2. Camera and On-Device Machine Learning</h2>
+
+<p>EarnScroll uses your device's camera to detect and count exercises (squats, pushups, planks) in real time. Here is exactly how it works:</p>
+
+<ol>
+    <li>When you start a workout, the camera captures live video frames.</li>
+    <li>Each frame is resized to 192×192 pixels and processed <strong>entirely on your device</strong> by a TensorFlow Lite pose-estimation model (MoveNet Lightning).</li>
+    <li>The model extracts body-joint positions (keypoints) from the frame. Joint angles are calculated to detect exercise form and count repetitions.</li>
+    <li>The original camera frame is <strong>immediately discarded from memory</strong> after keypoints are extracted. Frames are never saved to storage, never recorded, and never transmitted off your device.</li>
+    <li>Only the resulting exercise rep counts are saved to your device's local storage.</li>
+</ol>
+
+<div class="highlight">
+    <strong>Key point:</strong> No photos, videos, or images ever leave your device. All pose-estimation processing happens locally using on-device machine learning. We have no ability to access, view, or retrieve your camera feed.
+</div>
+
+<!-- ───────────────────────────────────────── -->
+<h2>3. Accessibility Service and App Blocking</h2>
+
+<p>EarnScroll uses Android's AccessibilityService API to provide its app-blocking feature. When your earned screen-time minutes run out, the accessibility service detects when you open a blocked app and displays a full-screen overlay prompting you to earn more time through exercise.</p>
+
+<h3>What the accessibility service accesses:</h3>
+<ul>
+    <li><strong>Window state changes</strong> — which app is currently in the foreground, so the service can determine if a blocked app has been launched.</li>
+    <li><strong>Package names</strong> — the identity of the foreground app, compared against your personal block list.</li>
+</ul>
+
+<h3>What the accessibility service does NOT access:</h3>
+<ul>
+    <li>Screen content, text, passwords, or input fields</li>
+    <li>Notifications or messages</li>
+    <li>Clipboard data</li>
+    <li>Any data from other apps beyond the package name</li>
+</ul>
+
+<div class="highlight">
+    <strong>Key point:</strong> All accessibility service data stays entirely on your device in encrypted storage. We never transmit app-usage data, your block list, or which apps you use to any server.
+</div>
+
+<h3>Prominent In-App Disclosure</h3>
+<p>Before the App requests you to enable the accessibility service, a dedicated disclosure screen will explain exactly what data is accessed, how it is used, and that it remains on your device. You must provide affirmative consent (e.g., tapping "I Understand") before the permission request is shown. You can revoke access at any time via your device settings (Settings → Accessibility → EarnScroll).</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>4. Third-Party Services</h2>
+
+<p>We use the following third-party services that may process some of your data:</p>
+
+<h3>4.1 Supabase (Authentication)</h3>
+<p>We use <a href="https://supabase.com/privacy" target="_blank">Supabase</a> to handle account creation, sign-in, and session management. When you create an account or sign in, your email address, phone number (if using SMS verification), or OAuth tokens are transmitted to and stored on Supabase's servers. Supabase acts as a data processor on our behalf.</p>
+<p>Supabase's privacy policy: <a href="https://supabase.com/privacy" target="_blank">https://supabase.com/privacy</a></p>
+
+<h3>4.2 Google Sign-In</h3>
+<p>If you sign in with Google, the authentication flow is handled through Google's OAuth service. We receive your Google account email and a unique identifier. We do not receive your Google password.</p>
+<p>Google's privacy policy: <a href="https://policies.google.com/privacy" target="_blank">https://policies.google.com/privacy</a></p>
+
+<h3>4.3 Apple Sign In</h3>
+<p>If you sign in with Apple, we may receive your name and email (or an Apple-generated relay email if you choose to hide your address). We do not receive your Apple ID password.</p>
+<p>Apple's privacy policy: <a href="https://www.apple.com/legal/privacy/" target="_blank">https://www.apple.com/legal/privacy/</a></p>
+
+<h3>4.4 Google Fonts</h3>
+<p>The App loads custom fonts (Inter, Space Grotesk, Space Mono) from Google's font servers at startup. This request transmits your device's IP address and user-agent string to Google. No other personal data is sent.</p>
+<p>Google Fonts privacy: <a href="https://developers.google.com/fonts/faq/privacy" target="_blank">https://developers.google.com/fonts/faq/privacy</a></p>
+
+<h3>4.5 Expo Platform</h3>
+<p>EarnScroll is built with the Expo framework, which may transmit minimal device and build telemetry (such as OS version and CPU architecture) to Expo's servers for compatibility purposes. No personal user data is included in this telemetry.</p>
+<p>Expo's privacy policy: <a href="https://expo.dev/privacy" target="_blank">https://expo.dev/privacy</a></p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>5. How We Use Your Information</h2>
+
+<p>We use the information we collect for the following purposes:</p>
+
+<ul>
+    <li><strong>Provide core functionality:</strong> Track exercises, calculate earned screen time, manage your time bank, enforce app blocking, and maintain your workout streak.</li>
+    <li><strong>Authenticate your account:</strong> Verify your identity when you sign in and maintain your session.</li>
+    <li><strong>Communicate with you:</strong> Send password reset emails or verification codes when you request them.</li>
+    <li><strong>Improve the App:</strong> Understand general usage patterns to improve features (using only aggregated, non-identifying data).</li>
+</ul>
+
+<p>We do <strong>not</strong> use your information for advertising, behavioral profiling, or data brokerage.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>6. Data Sharing</h2>
+
+<p>We do not sell, rent, or trade your personal information. We share data only in the following limited circumstances:</p>
+
+<ul>
+    <li><strong>Authentication providers:</strong> Your sign-in credentials are shared with Supabase (and Google or Apple if you use those sign-in methods) solely to authenticate your account.</li>
+    <li><strong>Legal requirements:</strong> We may disclose your information if required by law, legal process, or governmental request.</li>
+    <li><strong>Safety:</strong> We may share information if we believe in good faith that disclosure is necessary to protect the safety of our users or the public.</li>
+</ul>
+
+<!-- ───────────────────────────────────────── -->
+<h2>7. Data Storage and Security</h2>
+
+<h3>7.1 On-Device Storage</h3>
+<p>The majority of your data — workout history, time bank, streak, app preferences, and blocking settings — is stored exclusively on your device. Sensitive data (such as subscription status and your block list) is stored in encrypted storage backed by your device's hardware security. Time-bank data is protected with HMAC-based integrity signing to prevent tampering.</p>
+
+<h3>7.2 Cloud Storage</h3>
+<p>Only your account credentials and session data are stored on Supabase's cloud servers, which use industry-standard encryption at rest and in transit (TLS 1.2+). Supabase hosts data on AWS infrastructure.</p>
+
+<h3>7.3 Security Measures</h3>
+<p>We employ the following security measures:</p>
+<ul>
+    <li>Hardware-backed encrypted storage (Expo SecureStore / Android EncryptedSharedPreferences) for sensitive local data</li>
+    <li>HMAC-SHA256 integrity signing for time-bank and workout data to prevent tampering</li>
+    <li>Device-unique cryptographic keys generated securely and stored in the device keychain</li>
+    <li>TLS encryption for all data transmitted to Supabase</li>
+    <li>No plain-text storage of passwords (handled entirely by Supabase's auth service)</li>
+</ul>
+
+<!-- ───────────────────────────────────────── -->
+<h2>8. Data Retention</h2>
+
+<table>
+    <tr><th>Data Type</th><th>Retention Period</th></tr>
+    <tr><td>Workout history</td><td>Up to 365 days, stored on your device. Older entries are automatically pruned.</td></tr>
+    <tr><td>Time bank, streak, preferences</td><td>Stored on your device until you uninstall the App or clear app data.</td></tr>
+    <tr><td>Blocked apps list &amp; usage data</td><td>Stored on your device until you uninstall the App or clear app data.</td></tr>
+    <tr><td>Camera frames</td><td>Not retained. Processed in real-time memory and immediately discarded.</td></tr>
+    <tr><td>Account data (email, phone)</td><td>Stored on Supabase until you delete your account or request deletion.</td></tr>
+    <tr><td>Session tokens</td><td>Stored on your device; refreshed automatically and invalidated on sign-out.</td></tr>
+    <tr><td>Guest Mode data</td><td>Stored locally on your device. Permanently deleted when you uninstall the App or clear app data. Cannot be recovered.</td></tr>
+    <tr><td>Device-unique identifier</td><td>Stored in secure keychain on your device until you uninstall the App.</td></tr>
+</table>
+
+<!-- ───────────────────────────────────────── -->
+<h2>9. Your Rights and Choices</h2>
+
+<h3>9.1 All Users</h3>
+<ul>
+    <li><strong>Guest Mode:</strong> Use the App without creating an account. No personal identifiers are collected.</li>
+    <li><strong>Delete local data:</strong> Clear all App data through your device settings (Settings → Apps → EarnScroll → Storage → Clear Data).</li>
+    <li><strong>Revoke permissions:</strong> Disable camera access or the accessibility service at any time through your device settings. The App will continue to function with reduced features.</li>
+    <li><strong>Delete your account:</strong> Contact us at the email below to request deletion of your Supabase account and all associated data.</li>
+</ul>
+
+<h3>9.2 European Economic Area (EEA) Residents — GDPR Rights</h3>
+<p>If you are located in the EEA, you have the following rights under the General Data Protection Regulation (GDPR):</p>
+<ul>
+    <li><strong>Right of access:</strong> Request a copy of the personal data we hold about you.</li>
+    <li><strong>Right to rectification:</strong> Request correction of inaccurate personal data.</li>
+    <li><strong>Right to erasure:</strong> Request deletion of your personal data ("right to be forgotten").</li>
+    <li><strong>Right to restrict processing:</strong> Request that we limit how we use your data.</li>
+    <li><strong>Right to data portability:</strong> Receive your data in a structured, machine-readable format.</li>
+    <li><strong>Right to object:</strong> Object to processing based on legitimate interests.</li>
+    <li><strong>Right to withdraw consent:</strong> Withdraw consent at any time, without affecting the lawfulness of processing before withdrawal.</li>
+</ul>
+<p><strong>Legal basis for processing:</strong> We process your data based on (a) your consent (for camera and accessibility service usage), (b) contractual necessity (to provide the App's core features), and (c) legitimate interest (to maintain security and prevent fraud).</p>
+<p>To exercise any of these rights, contact us at the email below. We will respond within 30 days.</p>
+
+<h3>9.3 California Residents — CCPA/CPRA Rights</h3>
+<p>If you are a California resident, you have the following rights under the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA):</p>
+<ul>
+    <li><strong>Right to know:</strong> Request disclosure of the categories and specific pieces of personal information we have collected about you.</li>
+    <li><strong>Right to delete:</strong> Request deletion of your personal information.</li>
+    <li><strong>Right to correct:</strong> Request correction of inaccurate personal information.</li>
+    <li><strong>Right to opt-out:</strong> We do not sell or share your personal information for cross-context behavioral advertising. No opt-out is necessary.</li>
+    <li><strong>Right to non-discrimination:</strong> We will not discriminate against you for exercising your privacy rights.</li>
+</ul>
+<p>To exercise any of these rights, contact us at the email below. We will respond within 45 days.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>10. Children's Privacy</h2>
+
+<p>EarnScroll is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If we learn that we have inadvertently collected personal information from a child under 13, we will delete that information promptly.</p>
+
+<p>If you are a parent or guardian and believe your child has provided us with personal information, please contact us at the email below so we can take appropriate action.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>11. Permissions We Request and Why</h2>
+
+<table>
+    <tr><th>Permission</th><th>Why We Need It</th></tr>
+    <tr><td>Camera</td><td>Real-time exercise detection using on-device pose estimation. Frames are never stored or transmitted.</td></tr>
+    <tr><td>Accessibility Service</td><td>Detect when blocked apps are opened and display the blocking overlay when your time bank is empty.</td></tr>
+    <tr><td>Query All Packages</td><td>Display a list of your installed apps so you can choose which ones to block.</td></tr>
+    <tr><td>Package Usage Stats</td><td>Show you how much time you spend on each app per day.</td></tr>
+    <tr><td>System Alert Window</td><td>Display the full-screen blocking overlay on top of other apps.</td></tr>
+    <tr><td>Internet</td><td>Account authentication and session management via Supabase; font loading.</td></tr>
+    <tr><td>Vibrate</td><td>Haptic feedback during workouts (e.g., when a rep is counted).</td></tr>
+    <tr><td>Motion (iOS)</td><td>Enhance exercise tracking accuracy using device motion sensors.</td></tr>
+</table>
+
+<!-- ───────────────────────────────────────── -->
+<h2>12. International Data Transfers</h2>
+
+<p>Your account data is processed by Supabase, whose servers are hosted on Amazon Web Services (AWS) infrastructure. If you are located outside the United States, your data may be transferred to and processed in the United States or other countries where AWS operates data centers. We ensure that such transfers comply with applicable data protection laws, including the use of Standard Contractual Clauses where required by GDPR.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>13. Changes to This Privacy Policy</h2>
+
+<p>We may update this Privacy Policy from time to time. When we make material changes, we will notify you by updating the "Last Updated" date at the top of this page and, where practical, through an in-app notification. Your continued use of the App after changes are posted constitutes your acceptance of the revised policy.</p>
+
+<p>We encourage you to review this page periodically for the latest information on our privacy practices.</p>
+
+<!-- ───────────────────────────────────────── -->
+<h2>14. Contact Us</h2>
+
+<p>If you have any questions about this Privacy Policy, wish to exercise your privacy rights, or have concerns about how your data is handled, please contact us:</p>
+
+<p>
+    <strong>Email:</strong> <a href="mailto:virajsonib901@gmail.com">virajsonib901@gmail.com</a><br>
+    <strong>App:</strong> EarnScroll<br>
+    <strong>Developer:</strong> Viraj Soni
+</p>
+
+<div class="footer">
+    <p>&copy; 2026 EarnScroll. All rights reserved.</p>
+</div>
+
+</div>
+</body>
+</html>

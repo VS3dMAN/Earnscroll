@@ -1,8 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx expo:*)",
-      "Bash(npm ls:*)"
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(taskkill /F /IM java.exe)",
+      "Bash(taskkill /F /IM node.exe /FI \"WINDOWTITLE eq *metro*\")",
+      "Bash(taskkill /F /PID 4836)",
+      "Bash(taskkill /F /PID 2720)",
+      "Bash(taskkill /F /PID 3064)",
+      "Bash(taskkill /F /PID 3392)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(\"/c/Users/Dell/AppData/Local/Android/Sdk/platform-tools/adb\" shell:*)",
+      "Bash(taskkill //F //IM \"adb.exe\")",
+      "Bash(taskkill //F //IM \"java.exe\")",
+      "Bash(taskkill //F //IM \"node.exe\")",
+      "Bash(cmd:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git push --force:*)"
+    ],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "E:\\Builds\\EarnScroll"
     ]
   }
 }

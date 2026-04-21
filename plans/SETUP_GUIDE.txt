@@ -1,0 +1,482 @@
+================================================================================
+EARNSCROLL — COMPLETE ANDROID SETUP GUIDE
+================================================================================
+
+WHAT THIS FILE IS ABOUT
+------------------------
+This document is a complete, step-by-step guide for setting up the EarnScroll
+project from a zip file on a new Windows machine and getting the app running on
+a physical Android phone. It is written so that Claude Opus (or any developer)
+can follow it top-to-bottom with zero prior context and arrive at a working,
+testable build on an Android device.
+
+EarnScroll is a React Native app built with Expo SDK 54 and expo-dev-client.
+It uses native Android modules (camera, TFLite pose estimation, accessibility
+service) which means it CANNOT run on Expo Go. You MUST build a custom dev
+client (which this guide covers). The android/ folder is included in the zip
+so a full prebuild is not required — but a Gradle compile + install IS required.
+
+================================================================================
+SECTION 1 — PREREQUISITES (SOFTWARE TO INSTALL)
+================================================================================
+
+You need the following installed on your machine before doing anything else.
+Do them in order.
+
+------------------------------------------------------------------------
+1.1  Node.js (LTS version)
+------------------------------------------------------------------------
+Download: https://nodejs.org/  (choose the LTS tab, not "Current")
+Install the Windows installer (.msi). Accept all defaults.
+After install, verify in a NEW terminal window:
+    node --version      # should print v20.x.x or v22.x.x
+    npm --version       # should print 10.x.x or similar
+
+------------------------------------------------------------------------
+1.2  JDK 17 (Java Development Kit)
+------------------------------------------------------------------------
+EarnScroll requires JDK 17 exactly. Android tooling does not work with JDK 21+.
+
+Download Temurin JDK 17 (free, from Adoptium):
+    https://adoptium.net/temurin/releases/?version=17
+    Select: Windows, x64, JDK, .msi
+
+Install it. During install, check the box "Set JAVA_HOME variable" if offered.
+
+After install, verify:
+    java -version       # should print: openjdk version "17.x.x"
+
+If it does not say 17, you may have another JDK on your PATH. See Section 1.5
+for how to set JAVA_HOME manually.
+
+------------------------------------------------------------------------
+1.3  Android Studio
+------------------------------------------------------------------------
+Download: https://developer.android.com/studio
+Install with all default options. Let it download the Android SDK.
+
+After Android Studio opens for the first time:
+  - Open "SDK Manager" (More Actions > SDK Manager on the welcome screen)
+  - Under "SDK Platforms" tab, check: Android 14 (API 34) or Android 15 (API 35)
+  - Under "SDK Tools" tab, ensure these are checked:
+      * Android SDK Build-Tools 34.x
+      * Android SDK Command-line Tools (latest)
+      * Android Emulator
+      * Android SDK Platform-Tools
+      * NDK (Side by side) — version 26 or 27
+  - Click Apply and let it download.
+
+Note down the Android SDK Location shown at the top of SDK Manager.
+It usually looks like:  C:\Users\YourName\AppData\Local\Android\Sdk
+
+------------------------------------------------------------------------
+1.4  Git (optional but recommended)
+------------------------------------------------------------------------
+Download: https://git-scm.com/download/win
+Install with defaults. Not strictly required since you have the zip.
+
+------------------------------------------------------------------------
+1.5  Set Environment Variables
+------------------------------------------------------------------------
+You MUST set these environment variables or Android builds will fail.
+
+Open "Edit the system environment variables" from the Start menu.
+Click "Environment Variables..." button.
+
+Under "User variables", create/edit:
+
+  JAVA_HOME
+    Value: C:\Program Files\Eclipse Adoptium\jdk-17.x.x-hotspot
+    (exact path to where JDK 17 was installed — confirm it exists)
+
+  ANDROID_HOME
+    Value: C:\Users\YourName\AppData\Local\Android\Sdk
+    (the SDK Location you noted from Android Studio SDK Manager)
+
+Under "User variables", find PATH and add these entries:
+    %ANDROID_HOME%\platform-tools
+    %ANDROID_HOME%\emulator
+    %ANDROID_HOME%\cmdline-tools\latest\bin
+    %JAVA_HOME%\bin
+
+Open a NEW terminal and verify:
+    adb --version           # should show Android Debug Bridge version
+    java -version           # should show 17.x.x
+    javac -version          # should show 17.x.x
+
+================================================================================
+SECTION 2 — ANDROID PHONE SETUP (PHYSICAL DEVICE)
+================================================================================
+
+You need to enable Developer Options and USB Debugging on your Android phone.
+
+Step 1 — Enable Developer Options:
+  - Open Settings > About Phone
+  - Find "Build Number" (may be under Software Information)
+  - Tap "Build Number" 7 times rapidly
+  - You will see "You are now a developer!"
+
+Step 2 — Enable USB Debugging:
+  - Go to Settings > Developer Options (now visible in Settings)
+  - Scroll down and toggle ON "USB Debugging"
+  - Also toggle ON "Install via USB" if present
+
+Step 3 — Connect to Computer:
+  - Plug your phone into your PC with a USB cable (use the data cable, not a
+    charge-only cable)
+  - On your phone, a dialog will appear: "Allow USB Debugging?"
+  - Tap "Allow" (check "Always allow from this computer" for convenience)
+
+Step 4 — Verify ADB sees your device:
+  Open a terminal and run:
+    adb devices
+  You should see something like:
+    List of devices attached
+    XXXXXXXXXX    device
+  If it shows "unauthorized", unlock your phone and re-authorize.
+  If it shows nothing, try a different USB cable or port.
+
+================================================================================
+SECTION 3 — EXTRACTING AND PREPARING THE PROJECT
+================================================================================
+
+Step 1 — Extract the zip:
+  Extract the EarnScroll zip to a short path to avoid Windows path length issues.
+  Recommended: C:\Dev\EarnScroll   or   E:\Builds\EarnScroll
+
+  IMPORTANT: Avoid paths with spaces (e.g., "My Documents\EarnScroll" will
+  cause Gradle build failures).
+
+Step 2 — Open a terminal in the project root:
+  Open Command Prompt or Git Bash.
+  Navigate to the project folder:
+    cd C:\Dev\EarnScroll        (or wherever you extracted it)
+
+Step 3 — Install Node dependencies:
+    npm install
+
+  This installs all JavaScript/TypeScript packages listed in package.json.
+  It will take 1-3 minutes and create/update the node_modules/ folder.
+
+  If you see errors about peer dependencies, try:
+    npm install --legacy-peer-deps
+
+================================================================================
+SECTION 4 — UNDERSTANDING THE BUILD SYSTEM
+================================================================================
+
+This project uses expo-dev-client — a custom development build, NOT Expo Go.
+The android/ folder is already included in the zip (it was generated by
+`npx expo prebuild` previously). You do NOT need to run prebuild again unless
+you change app.json or native plugin code.
+
+The build command is:
+    npm run android
+  which is equivalent to:
+    npx expo run:android
+
+This command:
+  1. Detects your connected Android device via ADB
+  2. Compiles the Kotlin/Java native code using Gradle
+  3. Packages the React Native JavaScript bundle
+  4. Installs the APK on your device
+  5. Launches the app
+
+The first build takes 5-15 minutes because Gradle downloads dependencies and
+compiles native code. Subsequent builds are faster (2-5 minutes) due to caching.
+
+================================================================================
+SECTION 5 — BUILDING AND RUNNING ON ANDROID
+================================================================================
+
+Step 1 — Make sure your phone is connected and ADB detects it:
+    adb devices
+  You should see your device listed as "device" (not "offline" or "unauthorized").
+
+Step 2 — Start the build:
+    npm run android
+
+  You will see Gradle output scrolling. Warnings are fine. Watch for errors.
+
+Step 3 — First launch on device:
+  Once the build succeeds and installs, the app opens on your phone.
+  You will be asked for:
+    - Camera permission (required for exercise detection)
+    - Accessibility Service permission (for app blocking feature)
+
+  For Accessibility Service:
+    - The app will prompt you to go to Settings > Accessibility
+    - Find "EarnScroll" in the list and enable it
+    - This is required for the app blocker feature to work
+
+Step 4 — Onboarding:
+  On first launch, you will go through onboarding where you pick your free
+  exercise (squats, pushups, or plank). Complete this to enter the main app.
+
+================================================================================
+SECTION 6 — RUNNING THE METRO BUNDLER (DEVELOPMENT MODE)
+================================================================================
+
+When developing, you typically run two things in parallel:
+
+Terminal 1 — Metro bundler (JS hot reload):
+    npm run start
+
+Terminal 2 — (only needed once to install the app):
+    npm run android
+
+After the APK is installed on the device, you only need to run `npm run start`
+for subsequent JS changes. The app will hot-reload automatically.
+
+If you want a clean start (full rebuild):
+    npm run android
+
+================================================================================
+SECTION 7 — COMMON ERRORS AND FIXES
+================================================================================
+
+------------------------------------------------------------------------
+Error: "ANDROID_HOME is not set" or "SDK location not found"
+------------------------------------------------------------------------
+Fix: Set ANDROID_HOME as described in Section 1.5. Open a new terminal
+after setting it.
+
+------------------------------------------------------------------------
+Error: "Could not resolve com.android.tools.build:gradle:x.x.x"
+------------------------------------------------------------------------
+Fix: Check your internet connection. Gradle downloads dependencies from
+Maven repositories. If behind a corporate proxy, configure proxy in:
+    android/gradle.properties
+Add:
+    systemProp.http.proxyHost=your.proxy.host
+    systemProp.http.proxyPort=8080
+
+------------------------------------------------------------------------
+Error: "adb: command not found" or ADB not recognized
+------------------------------------------------------------------------
+Fix: Add %ANDROID_HOME%\platform-tools to your PATH (Section 1.5).
+Then open a new terminal.
+
+------------------------------------------------------------------------
+Error: "No devices/emulators found"
+------------------------------------------------------------------------
+Fix:
+  1. Ensure USB debugging is on (Section 2)
+  2. Run `adb devices` — if empty, unplug/replug USB
+  3. Try a different USB cable (must support data transfer)
+  4. On phone: check if an authorization dialog appeared
+
+------------------------------------------------------------------------
+Error: "Duplicate class kotlin.collections.*" or packaging conflicts
+------------------------------------------------------------------------
+Fix: Already handled in app.json via packagingOptions.pickFirst. If it
+still occurs, run:
+    cd android && ./gradlew clean && cd ..
+    npm run android
+
+------------------------------------------------------------------------
+Error: "EarnScrollPackage not found" or "ClassNotFoundException"
+------------------------------------------------------------------------
+Fix: The native code injection may have failed during prebuild. Run:
+    npx expo prebuild --platform android --clean
+    npm run android
+NOTE: --clean will delete and regenerate the android/ folder.
+
+------------------------------------------------------------------------
+Error: "metro bundler port already in use"
+------------------------------------------------------------------------
+Fix:
+    npx kill-port 8081
+    npm run start
+
+------------------------------------------------------------------------
+Error: "react-native-worklets-core" plugin error in babel
+------------------------------------------------------------------------
+Fix: Check babel.config.js — it must have:
+    'react-native-worklets-core/plugin'   <-- listed FIRST
+    'react-native-worklets/plugin'         <-- listed LAST
+The order matters. reanimated/worklets must always be last.
+
+------------------------------------------------------------------------
+Error: "TFLite model not found" or crash on camera screen
+------------------------------------------------------------------------
+The model file must exist at:
+    assets/models/movenet_lightning.tflite
+If missing, the pose detection will crash. This file is included in the
+zip. Verify it exists before building.
+
+------------------------------------------------------------------------
+Build fails with "Kotlin version" error
+------------------------------------------------------------------------
+The project requires Kotlin 2.0.21. This is set in android/gradle.properties:
+    android.kotlinVersion=2.0.21
+Also set in app.json under expo > plugins > expo-build-properties.
+If Gradle complains, ensure you have a network connection so it can
+download the correct Kotlin version.
+
+========================================================================
+SECTION 8 — IF YOU NEED TO REGENERATE THE ANDROID FOLDER (PREBUILD)
+========================================================================
+
+Only do this if:
+  - The android/ folder is missing or corrupted
+  - You changed app.json (plugins, package name, permissions)
+  - You added a new native Expo plugin
+
+Run:
+    npx expo prebuild --platform android --clean
+
+WARNING: --clean DELETES the entire android/ folder and regenerates it.
+Any manual edits to android/ files (outside of generated areas) will be lost.
+The Kotlin files in android/app/src/main/java/com/earnscroll/ are
+auto-generated by the plugins and will be re-created.
+
+After prebuild:
+    npm run android
+
+========================================================================
+SECTION 9 — PROJECT STRUCTURE OVERVIEW (FOR CLAUDE)
+========================================================================
+
+EarnScroll/
+├── app/                    # Expo Router screens (file-based routing)
+│   ├── (tabs)/             # Main tab screens: index (Dashboard), workout, targets
+│   ├── onboarding.tsx      # First-run screen to pick free exercise
+│   ├── go-pro.tsx          # Pro upgrade modal
+│   ├── settings.tsx        # User settings
+│   └── developer-menu.tsx  # Dev tools (unlocked via dev mode)
+│
+├── components/
+│   └── NativeWorkoutCamera.tsx  # Camera + TFLite pose estimation + rep counting
+│
+├── contexts/
+│   ├── TimeBank.tsx        # Central state: earned minutes, workout history, streaks
+│   └── Theme.tsx           # Light/dark/system theme
+│
+├── constants/
+│   ├── colors.ts           # Theme color palettes
+│   └── typography.ts       # Font sizes and weights
+│
+├── plugins/
+│   ├── withAppBlocker.js   # Expo config plugin: copies native-src/ Kotlin files
+│   └── withEarnScrollNative.js  # Expo config plugin: generates EarnScrollModule,
+│                                #   EarnScrollPackage, BlockerService inline
+│
+├── native-src/android/     # Source Kotlin files for withAppBlocker plugin
+│   (currently empty — withAppBlocker will warn but not fail)
+│
+├── assets/
+│   ├── images/             # App icons and splash screen
+│   └── models/
+│       └── movenet_lightning.tflite  # On-device pose estimation model (MoveNet)
+│
+├── android/                # Generated Android project (do not edit manually)
+│   └── app/src/main/java/com/earnscroll/
+│       ├── EarnScrollModule.kt    # RN bridge: getInstalledApps, setBlockedPackages
+│       ├── EarnScrollPackage.kt   # Registers EarnScrollModule
+│       └── BlockerService.kt     # Accessibility service that enforces app blocking
+│
+├── app.json                # Expo config: app name, permissions, plugins
+├── babel.config.js         # Babel: worklets-core plugin first, worklets/reanimated last
+├── metro.config.js         # Metro: adds .tflite to asset extensions
+├── package.json            # npm dependencies
+└── tsconfig.json           # TypeScript config
+
+KEY DEPENDENCIES:
+  react-native-vision-camera     Camera access for workout detection
+  react-native-fast-tflite       Runs the MoveNet TFLite model on-device
+  vision-camera-resize-plugin    Preprocesses camera frames for TFLite input
+  react-native-worklets-core     JS worklet runtime for frame processor
+  react-native-reanimated        Animations (v4, bundled as react-native-worklets)
+  expo-dev-client                Custom development build (not Expo Go)
+  @nkzw/create-context-hook      Typed React context factory
+  zod                            Runtime schema validation for persisted state
+  @react-native-async-storage    Persists TimeBank and Theme state
+
+KEY ANDROID PERMISSIONS:
+  CAMERA                         Exercise tracking via camera
+  RECORD_AUDIO                   Required by VisionCamera
+  VIBRATE                        Haptic feedback
+  QUERY_ALL_PACKAGES             List installed apps for blocking
+  PACKAGE_USAGE_STATS            Monitor which app is in foreground
+  BIND_ACCESSIBILITY_SERVICE     Block apps via AccessibilityService
+
+========================================================================
+SECTION 10 — QUICK REFERENCE COMMANDS
+========================================================================
+
+Install dependencies:
+    npm install
+
+Start Metro bundler (hot reload, no build):
+    npm run start
+
+Build and install on Android device:
+    npm run android
+
+Clean Gradle build cache:
+    cd android && ./gradlew clean && cd ..
+
+Full regenerate of android/ folder (destructive):
+    npx expo prebuild --platform android --clean
+
+Check connected devices:
+    adb devices
+
+Kill Metro if port 8081 is stuck:
+    npx kill-port 8081
+
+Run ESLint:
+    npx expo lint
+
+========================================================================
+SECTION 11 — EXPECTED BEHAVIOR ON FIRST LAUNCH
+========================================================================
+
+1. App launches showing the onboarding screen.
+2. User picks one free exercise (squats, pushups, or plank).
+3. Main dashboard shows time bank at 0 minutes.
+4. Workout tab opens the camera — camera permission dialog appears.
+5. User completes reps — each completed set earns minutes (ratio configurable).
+6. Earned minutes appear in the time bank on the dashboard.
+7. Targets tab shows daily goals.
+8. Settings allow toggling theme (light/dark/system) and other prefs.
+9. App Blocker: in Settings, user selects apps to block and enables the
+   accessibility service. When time bank hits 0, those apps are blocked.
+
+Developer Mode (for testing):
+  - In Settings, tap the app version number 7 times to unlock Developer Mode.
+  - Developer mode unlocks: unlimited emergency pauses, dev menu, debug tools.
+
+========================================================================
+NOTES FOR CLAUDE OPUS
+========================================================================
+
+- Do NOT run `npx expo prebuild` unless the android/ folder is missing or
+  you have changed app.json / plugin files. Prebuild overwrites android/.
+
+- The native-src/android/ folder is currently EMPTY. The withAppBlocker
+  plugin (plugins/withAppBlocker.js) copies from it but will only warn if
+  files are missing — it won't error out. The important native files
+  (EarnScrollModule.kt, EarnScrollPackage.kt, BlockerService.kt) are
+  generated inline by withEarnScrollNative.js and already exist in the
+  android/app/src/main/java/com/earnscroll/ directory.
+
+- If asked to add a new screen, add it as a file under app/ following
+  Expo Router file-based routing conventions.
+
+- All app state goes through contexts/TimeBank.tsx. Read it carefully
+  before touching workout history, streaks, or earned minutes logic.
+
+- The workout rep-counting logic lives in components/NativeWorkoutCamera.tsx.
+  It uses frame processors (worklets) — any code in those closures must
+  be worklet-safe (no async/await, no React hooks inside frame processor).
+
+- babel.config.js plugin ORDER is critical:
+    1. react-native-worklets-core/plugin   (must be first)
+    2. react-native-worklets/plugin        (must be last)
+  Never reorder these. reanimated is bundled as react-native-worklets in v4.
+
+================================================================================
+END OF SETUP GUIDE
+================================================================================

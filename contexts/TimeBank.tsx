@@ -1,12 +1,30 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { NativeModules, Platform, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { z } from 'zod';
+import {
+  setSignedItem,
+  getSignedItem,
+  setSecureItem,
+  getSecureItem,
+  removeSecureItem,
+  clampMinutes,
+  initSecureStorage,
+  LIMITS,
+} from '@/utils/secureStorage';
+
+const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
+
+// LAUNCH MODE — unlock every Pro feature for everyone.
+// Flip to `false` after payment integration is ready; the Free/Pro split
+// below returns to its original behavior with zero other code changes.
+export const FREE_LAUNCH_MODE = true;
 
 const EarningRatiosSchema = z.object({
-  squats: z.number().min(0),
-  pushups: z.number().min(0),
-  planks: z.number().min(0),
+  squats: z.number().min(0).max(LIMITS.MAX_EARNING_RATIO),
+  pushups: z.number().min(0).max(LIMITS.MAX_EARNING_RATIO),
+  planks: z.number().min(0).max(LIMITS.MAX_EARNING_RATIO),
 });
 
 const DailyWorkoutSchema = z.object({
@@ -25,6 +43,7 @@ const LAST_WORKOUT_DATE_KEY = '@last_workout_date';
 const CURRENT_STREAK_KEY = '@current_streak';
 const EMERGENCY_PAUSES_KEY = '@emergency_pauses_remaining';
 const LAST_PAUSE_RESET_KEY = '@last_pause_reset_date';
+const EMERGENCY_PAUSE_MINUTES_KEY = '@emergency_pause_minutes';
 const WORKOUT_HISTORY_KEY = '@workout_history';
 const DEVELOPER_MODE_KEY = '@developer_mode';
 const IS_USER_PRO_KEY = '@is_user_pro';
@@ -65,6 +84,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
   const [lastPauseResetDate, setLastPauseResetDate] = useState<string | null>(null);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistory>({});
   const [isDeveloperMode, setIsDeveloperMode] = useState<boolean>(false);
+  const [emergencyPauseMinutes, setEmergencyPauseMinutes] = useState<number>(5);
   const [isUserPro, setIsUserPro] = useState<boolean>(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
   const [userFreeExercise, setUserFreeExercise] = useState<FreeExerciseType>(null);
@@ -72,157 +92,162 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
   const lastWorkoutDateRef = useRef<string | null>(null);
   const currentStreakRef = useRef<number>(0);
 
+  // Single batched load: pre-warm HMAC key, then read all storage in parallel
   useEffect(() => {
-    loadTimeBank();
-    loadEarningRatios();
-    loadStreakData();
-    loadEmergencyPausesData();
-    loadWorkoutHistory();
-    loadDeveloperMode();
-    loadFreemiumData();
+    const loadAll = async () => {
+      try {
+        // 1. Pre-warm the HMAC key so all subsequent getSignedItem calls hit cache
+        await initSecureStorage();
+
+        // 2. Batch all plain AsyncStorage reads into one multiGet call
+        const asyncKeys = [
+          LAST_WORKOUT_DATE_KEY,
+          CURRENT_STREAK_KEY,
+          EMERGENCY_PAUSES_KEY,
+          LAST_PAUSE_RESET_KEY,
+          EMERGENCY_PAUSE_MINUTES_KEY,
+          HAS_COMPLETED_ONBOARDING_KEY,
+          USER_FREE_EXERCISE_KEY,
+        ];
+
+        // 3. Fire all reads in parallel: multiGet + signed items + secure items
+        const [asyncPairs, timeBankRaw, ratiosRaw, historyRaw, devModeRaw, proStatusRaw] = await Promise.all([
+          AsyncStorage.multiGet(asyncKeys),
+          getSignedItem(TIME_BANK_KEY),
+          getSignedItem(EARNING_RATIOS_KEY),
+          getSignedItem(WORKOUT_HISTORY_KEY),
+          __DEV__ ? getSecureItem(DEVELOPER_MODE_KEY) : Promise.resolve(null),
+          getSecureItem(IS_USER_PRO_KEY),
+        ]);
+
+        // 4. Unpack multiGet results into a map
+        const asyncMap = new Map(asyncPairs);
+
+        // -- Time bank --
+        if (timeBankRaw !== null) {
+          setEarnedMinutes(clampMinutes(parseFloat(timeBankRaw)));
+        }
+
+        // -- Earning ratios --
+        if (ratiosRaw !== null) {
+          try {
+            const parsed = EarningRatiosSchema.safeParse(JSON.parse(ratiosRaw));
+            if (parsed.success) setEarningRatios(parsed.data);
+          } catch {}
+        }
+
+        // -- Streak data --
+        const storedDate = asyncMap.get(LAST_WORKOUT_DATE_KEY) ?? null;
+        const storedStreak = asyncMap.get(CURRENT_STREAK_KEY) ?? null;
+        if (storedDate !== null) {
+          setLastWorkoutDate(storedDate);
+          lastWorkoutDateRef.current = storedDate;
+        }
+        if (storedStreak !== null) {
+          const parsed = parseInt(storedStreak, 10);
+          if (!isNaN(parsed)) {
+            setCurrentStreak(parsed);
+            currentStreakRef.current = parsed;
+          }
+        }
+        hasRecordedTodayRef.current = storedDate === new Date().toDateString();
+
+        // -- Emergency pauses --
+        const storedPauses = asyncMap.get(EMERGENCY_PAUSES_KEY) ?? null;
+        const storedResetDate = asyncMap.get(LAST_PAUSE_RESET_KEY) ?? null;
+        const today = new Date().toDateString();
+        if (storedResetDate === null || storedResetDate !== today) {
+          setEmergencyPausesRemaining(3);
+          setLastPauseResetDate(today);
+          AsyncStorage.setItem(EMERGENCY_PAUSES_KEY, '3').catch(() => {});
+          AsyncStorage.setItem(LAST_PAUSE_RESET_KEY, today).catch(() => {});
+        } else {
+          if (storedPauses !== null) {
+            const pauses = parseInt(storedPauses, 10);
+            if (!isNaN(pauses)) setEmergencyPausesRemaining(pauses);
+          }
+          setLastPauseResetDate(storedResetDate);
+        }
+
+        // -- Emergency pause minutes --
+        const storedMinutes = asyncMap.get(EMERGENCY_PAUSE_MINUTES_KEY) ?? null;
+        if (storedMinutes !== null) {
+          const parsed = parseInt(storedMinutes, 10);
+          if (!isNaN(parsed) && parsed > 0 && parsed <= LIMITS.MAX_EMERGENCY_PAUSE_MINUTES) {
+            setEmergencyPauseMinutes(parsed);
+          }
+        }
+
+        // -- Workout history --
+        if (historyRaw !== null) {
+          try {
+            const parsed = WorkoutHistorySchema.safeParse(JSON.parse(historyRaw));
+            if (parsed.success) {
+              const entries = Object.entries(parsed.data);
+              const limited = entries.length > LIMITS.MAX_WORKOUT_HISTORY_DAYS
+                ? Object.fromEntries(entries.slice(-LIMITS.MAX_WORKOUT_HISTORY_DAYS))
+                : parsed.data;
+              setWorkoutHistory(limited);
+            }
+          } catch {}
+        }
+
+        // -- Developer mode --
+        if (__DEV__ && devModeRaw !== null) {
+          setIsDeveloperMode(devModeRaw === 'true');
+        }
+
+        // -- Freemium data --
+        if (proStatusRaw !== null) {
+          setIsUserPro(proStatusRaw === 'true');
+        }
+        const storedOnboarding = asyncMap.get(HAS_COMPLETED_ONBOARDING_KEY) ?? null;
+        if (storedOnboarding !== null) {
+          setHasCompletedOnboarding(storedOnboarding === 'true');
+        }
+        const storedFreeExercise = asyncMap.get(USER_FREE_EXERCISE_KEY) ?? null;
+        if (storedFreeExercise !== null && VALID_FREE_EXERCISES.includes(storedFreeExercise as any)) {
+          setUserFreeExercise(storedFreeExercise as FreeExerciseType);
+        }
+      } catch (error) {
+        console.error('Failed to load app data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAll();
   }, []);
 
-  const loadTimeBank = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(TIME_BANK_KEY);
-      if (stored !== null) {
-        setEarnedMinutes(parseFloat(stored));
-      }
-    } catch (error) {
-      console.error('Failed to load time bank:', error);
-    } finally {
-      setIsLoading(false);
+  // Sync earned minutes to the native BlockerService
+  useEffect(() => {
+    if (EarnScrollModule?.setMinutesFloat) {
+      EarnScrollModule.setMinutesFloat(earnedMinutes);
+    } else if (EarnScrollModule?.setMinutes) {
+      EarnScrollModule.setMinutes(Math.floor(earnedMinutes));
     }
-  };
+  }, [earnedMinutes]);
 
-  const loadEarningRatios = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(EARNING_RATIOS_KEY);
-      if (stored !== null) {
-        const parsed = EarningRatiosSchema.safeParse(JSON.parse(stored));
-        if (parsed.success) {
-          setEarningRatios(parsed.data);
-        } else {
-          console.warn('Invalid earning ratios in storage, using defaults');
-          setEarningRatios(DEFAULT_EARNING_RATIOS);
-        }
+  // When EarnScroll returns to foreground, read back natively-drained minutes
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active' && EarnScrollModule?.getMinutes) {
+        try {
+          const nativeMinutes: number = await EarnScrollModule.getMinutes();
+          setEarnedMinutes(prev => {
+            const clamped = clampMinutes(nativeMinutes);
+            if (clamped < prev) {
+              setSignedItem(TIME_BANK_KEY, clamped.toString()).catch(() => {});
+              return clamped;
+            }
+            return prev;
+          });
+        } catch (_) {}
       }
-    } catch (error) {
-      console.error('Failed to load earning ratios:', error);
-    }
-  };
-
-  const loadStreakData = async () => {
-    try {
-      const [storedDate, storedStreak] = await Promise.all([
-        AsyncStorage.getItem(LAST_WORKOUT_DATE_KEY),
-        AsyncStorage.getItem(CURRENT_STREAK_KEY),
-      ]);
-
-      if (storedDate !== null) {
-        setLastWorkoutDate(storedDate);
-        lastWorkoutDateRef.current = storedDate;
-      }
-      if (storedStreak !== null) {
-        const parsed = parseInt(storedStreak, 10);
-        setCurrentStreak(parsed);
-        currentStreakRef.current = parsed;
-      }
-
-      const today = new Date().toDateString();
-      hasRecordedTodayRef.current = storedDate === today;
-
-      console.log('✓ Loaded streak data:', { lastWorkoutDate: storedDate, currentStreak: storedStreak, hasRecordedToday: hasRecordedTodayRef.current });
-    } catch (error) {
-      console.error('Failed to load streak data:', error);
-    }
-  };
-
-  const loadEmergencyPausesData = async () => {
-    try {
-      const [storedPauses, storedResetDate] = await Promise.all([
-        AsyncStorage.getItem(EMERGENCY_PAUSES_KEY),
-        AsyncStorage.getItem(LAST_PAUSE_RESET_KEY),
-      ]);
-
-      const today = new Date().toDateString();
-
-      if (storedResetDate === null || storedResetDate !== today) {
-        console.log('[EMERGENCY] New day detected, resetting pauses to 3');
-        setEmergencyPausesRemaining(3);
-        setLastPauseResetDate(today);
-        await AsyncStorage.setItem(EMERGENCY_PAUSES_KEY, '3');
-        await AsyncStorage.setItem(LAST_PAUSE_RESET_KEY, today);
-      } else {
-        if (storedPauses !== null) {
-          const pauses = parseInt(storedPauses, 10);
-          setEmergencyPausesRemaining(pauses);
-          console.log(`✓ Loaded emergency pauses: ${pauses}`);
-        }
-        setLastPauseResetDate(storedResetDate);
-      }
-    } catch (error) {
-      console.error('Failed to load emergency pauses data:', error);
-    }
-  };
-
-  const loadWorkoutHistory = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(WORKOUT_HISTORY_KEY);
-      if (stored !== null) {
-        const parsed = WorkoutHistorySchema.safeParse(JSON.parse(stored));
-        if (parsed.success) {
-          setWorkoutHistory(parsed.data);
-          console.log('✓ Loaded workout history:', Object.keys(parsed.data).length, 'days');
-        } else {
-          console.warn('Invalid workout history in storage, using empty');
-          setWorkoutHistory({});
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load workout history:', error);
-    }
-  };
-
-  const loadDeveloperMode = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(DEVELOPER_MODE_KEY);
-      if (stored !== null) {
-        setIsDeveloperMode(stored === 'true');
-        console.log('✓ Loaded developer mode:', stored);
-      }
-    } catch (error) {
-      console.error('Failed to load developer mode:', error);
-    }
-  };
-
-  const loadFreemiumData = async () => {
-    try {
-      const [storedPro, storedOnboarding, storedFreeExercise] = await Promise.all([
-        AsyncStorage.getItem(IS_USER_PRO_KEY),
-        AsyncStorage.getItem(HAS_COMPLETED_ONBOARDING_KEY),
-        AsyncStorage.getItem(USER_FREE_EXERCISE_KEY),
-      ]);
-
-      if (storedPro !== null) {
-        setIsUserPro(storedPro === 'true');
-      }
-      if (storedOnboarding !== null) {
-        setHasCompletedOnboarding(storedOnboarding === 'true');
-      }
-      if (storedFreeExercise !== null && VALID_FREE_EXERCISES.includes(storedFreeExercise as any)) {
-        setUserFreeExercise(storedFreeExercise as FreeExerciseType);
-      }
-
-      console.log('✓ Loaded freemium data:', {
-        isUserPro: storedPro,
-        hasCompletedOnboarding: storedOnboarding,
-        userFreeExercise: storedFreeExercise
-      });
-    } catch (error) {
-      console.error('Failed to load freemium data:', error);
-    }
-  };
+    });
+    return () => sub.remove();
+  }, []);
 
   const calculateStreakFromHistory = useCallback((history: WorkoutHistory): number => {
     const dates = Object.keys(history).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
@@ -301,11 +326,11 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
   }, []);
 
   const addMinutes = useCallback(async (minutes: number) => {
-    if (minutes <= 0) return;
+    if (!Number.isFinite(minutes) || minutes <= 0) return;
 
     setEarnedMinutes(prev => {
-      const newTotal = prev + minutes;
-      AsyncStorage.setItem(TIME_BANK_KEY, newTotal.toString()).catch(error => {
+      const newTotal = clampMinutes(prev + minutes);
+      setSignedItem(TIME_BANK_KEY, newTotal.toString()).catch(error => {
         console.error('Failed to save time bank:', error);
       });
       return newTotal;
@@ -320,7 +345,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
   const resetTimeBank = useCallback(async () => {
     setEarnedMinutes(0);
     try {
-      await AsyncStorage.removeItem(TIME_BANK_KEY);
+      await setSignedItem(TIME_BANK_KEY, '0');
       console.log('✓ Time bank reset');
     } catch (error) {
       console.error('Failed to reset time bank:', error);
@@ -330,11 +355,14 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
   const updateEarningRatios = useCallback(async (newRatios: Partial<EarningRatios>) => {
     setEarningRatios(prev => {
       const updated = { ...prev, ...newRatios };
-      AsyncStorage.setItem(EARNING_RATIOS_KEY, JSON.stringify(updated)).catch(error => {
+      // Validate before persisting
+      const validated = EarningRatiosSchema.safeParse(updated);
+      if (!validated.success) return prev;
+      setSignedItem(EARNING_RATIOS_KEY, JSON.stringify(validated.data)).catch(error => {
         console.error('Failed to save earning ratios:', error);
       });
-      console.log('✓ Updated earning ratios:', updated);
-      return updated;
+      console.log('✓ Updated earning ratios:', validated.data);
+      return validated.data;
     });
   }, []);
 
@@ -354,7 +382,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
         updated[today][exerciseType] += amount;
       }
 
-      AsyncStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(updated)).catch(error => {
+      setSignedItem(WORKOUT_HISTORY_KEY, JSON.stringify(updated)).catch(error => {
         console.error('Failed to save workout history:', error);
       });
 
@@ -372,10 +400,10 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
 
   const triggerEmergencyPause = useCallback(async (): Promise<{ success: boolean; message: string }> => {
     if (isDeveloperMode) {
-      await addMinutes(5);
+      await addMinutes(emergencyPauseMinutes);
       return {
         success: true,
-        message: `Emergency access granted! 5 minutes added. (Developer Mode - Unlimited)`
+        message: `Emergency access granted! ${emergencyPauseMinutes} minutes added. (Developer Mode - Unlimited)`
       };
     }
 
@@ -387,20 +415,20 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
     const newPausesRemaining = emergencyPausesRemaining - 1;
     setEmergencyPausesRemaining(newPausesRemaining);
 
-    await addMinutes(5);
+    await addMinutes(emergencyPauseMinutes);
 
     try {
       await AsyncStorage.setItem(EMERGENCY_PAUSES_KEY, newPausesRemaining.toString());
       console.log(`[EMERGENCY] Used emergency pause. Remaining: ${newPausesRemaining}`);
       return {
         success: true,
-        message: `Emergency access granted! 5 minutes added. ${newPausesRemaining} pause${newPausesRemaining === 1 ? '' : 's'} remaining.`
+        message: `Emergency access granted! ${emergencyPauseMinutes} minutes added. ${newPausesRemaining} pause${newPausesRemaining === 1 ? '' : 's'} remaining.`
       };
     } catch (error) {
       console.error('Failed to save emergency pauses:', error);
-      return { success: true, message: '5 minutes added to your time bank!' };
+      return { success: true, message: `${emergencyPauseMinutes} minutes added to your time bank!` };
     }
-  }, [emergencyPausesRemaining, addMinutes, isDeveloperMode]);
+  }, [emergencyPausesRemaining, addMinutes, isDeveloperMode, emergencyPauseMinutes]);
 
   const generateMockWorkoutHistory = useCallback(async (daysBack: number = 30) => {
     const mockHistory: WorkoutHistory = {};
@@ -421,7 +449,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
     }
 
     setWorkoutHistory(mockHistory);
-    await AsyncStorage.setItem(WORKOUT_HISTORY_KEY, JSON.stringify(mockHistory));
+    await setSignedItem(WORKOUT_HISTORY_KEY, JSON.stringify(mockHistory));
 
     const newStreak = calculateStreakFromHistory(mockHistory);
     setCurrentStreak(newStreak);
@@ -441,40 +469,50 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
 
     try {
       await AsyncStorage.multiRemove([
-        WORKOUT_HISTORY_KEY,
         CURRENT_STREAK_KEY,
         LAST_WORKOUT_DATE_KEY,
       ]);
-      await AsyncStorage.multiSet([
-        [WORKOUT_HISTORY_KEY, JSON.stringify({})],
-        [CURRENT_STREAK_KEY, '0'],
-      ]);
+      await setSignedItem(WORKOUT_HISTORY_KEY, JSON.stringify({}));
+      await AsyncStorage.setItem(CURRENT_STREAK_KEY, '0');
     } catch (error) {
       console.error('Failed to clear workout history:', error);
     }
   }, []);
 
   const enableDeveloperMode = useCallback(async () => {
+    if (FREE_LAUNCH_MODE) return; // Developer mode disabled in launch builds
+    if (!__DEV__) return; // Only in development builds
     setIsDeveloperMode(true);
-    await AsyncStorage.setItem(DEVELOPER_MODE_KEY, 'true');
+    await setSecureItem(DEVELOPER_MODE_KEY, 'true');
     console.log('✓ Developer mode enabled');
   }, []);
 
   const disableDeveloperMode = useCallback(async () => {
     setIsDeveloperMode(false);
-    await AsyncStorage.setItem(DEVELOPER_MODE_KEY, 'false');
+    await setSecureItem(DEVELOPER_MODE_KEY, 'false');
     console.log('✓ Developer mode disabled');
   }, []);
 
+  const updateEmergencyPauseMinutes = useCallback(async (minutes: number) => {
+    const clamped = Math.max(1, Math.min(minutes, LIMITS.MAX_EMERGENCY_PAUSE_MINUTES));
+    setEmergencyPauseMinutes(clamped);
+    await AsyncStorage.setItem(EMERGENCY_PAUSE_MINUTES_KEY, clamped.toString());
+    console.log(`✓ Emergency pause minutes updated to: ${clamped}`);
+  }, []);
+
   const toggleProStatus = useCallback(async () => {
+    // Dev-only manual override for testing the Free/Pro split.
+    // Real Pro status will be set by the Google Play Billing flow (see services/billing.ts).
+    if (FREE_LAUNCH_MODE) return isUserPro;
+    if (!__DEV__) return isUserPro;
     const newProStatus = !isUserPro;
     setIsUserPro(newProStatus);
-    await AsyncStorage.setItem(IS_USER_PRO_KEY, newProStatus.toString());
+    await setSecureItem(IS_USER_PRO_KEY, newProStatus.toString());
     console.log(`✓ Pro status toggled to: ${newProStatus}`);
     return newProStatus;
   }, [isUserPro]);
 
-  const completeOnboarding = useCallback(async (selectedExercise: 'squats' | 'pushups' | 'planks') => {
+  const completeOnboarding = useCallback(async (selectedExercise: 'squats' | 'pushups' | 'planks' = 'squats') => {
     setUserFreeExercise(selectedExercise);
     setHasCompletedOnboarding(true);
     await Promise.all([
@@ -499,13 +537,14 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
     await AsyncStorage.multiRemove([
       HAS_COMPLETED_ONBOARDING_KEY,
       USER_FREE_EXERCISE_KEY,
-      IS_USER_PRO_KEY,
       TIME_BANK_KEY,
       WORKOUT_HISTORY_KEY,
       CURRENT_STREAK_KEY,
       LAST_WORKOUT_DATE_KEY,
       EMERGENCY_PAUSES_KEY,
     ]);
+    // Remove secure items separately
+    await removeSecureItem(IS_USER_PRO_KEY);
 
     hasRecordedTodayRef.current = false;
     console.log('✓ Onboarding and all data reset');
@@ -519,10 +558,11 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       lastWorkoutDate,
       currentStreak,
       emergencyPausesRemaining,
+      emergencyPauseMinutes,
       lastPauseResetDate,
       workoutHistory,
-      isDeveloperMode,
-      isUserPro,
+      isDeveloperMode: FREE_LAUNCH_MODE ? false : isDeveloperMode,
+      isUserPro: FREE_LAUNCH_MODE ? true : isUserPro,
       hasCompletedOnboarding,
       userFreeExercise,
       addMinutes,
@@ -535,6 +575,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       clearAllWorkoutHistory,
       enableDeveloperMode,
       disableDeveloperMode,
+      updateEmergencyPauseMinutes,
       toggleProStatus,
       completeOnboarding,
       resetOnboarding,
@@ -546,6 +587,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       lastWorkoutDate,
       currentStreak,
       emergencyPausesRemaining,
+      emergencyPauseMinutes,
       lastPauseResetDate,
       workoutHistory,
       isDeveloperMode,
@@ -562,6 +604,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       clearAllWorkoutHistory,
       enableDeveloperMode,
       disableDeveloperMode,
+      updateEmergencyPauseMinutes,
       toggleProStatus,
       completeOnboarding,
       resetOnboarding,

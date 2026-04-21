@@ -324,7 +324,7 @@ Resume if form corrects
 ### What's Missing (Future Roadmap)
 ❌ Native AI implementation (mobile TensorFlow Lite)
 ❌ Backend + cloud sync (currently all local)
-❌ Real payment integration (RevenueCat/IAP)
+❌ Real payment integration (Google Play Billing)
 ❌ Social features (friends, leaderboards)
 ❌ More exercises (lunges, burpees, etc.)
 ❌ Manual rep entry (for non-web or offline)
@@ -344,7 +344,7 @@ Resume if form corrects
 
 ### Short-Term (Next 3 Months)
 1. **User Testing**: Get 50-100 beta users, collect feedback
-2. **Payment Integration**: RevenueCat + real subscriptions
+2. **Payment Integration**: Google Play Billing + real subscriptions
 3. **Analytics**: Mixpanel/Amplitude for conversion tracking
 4. **Manual Entry**: Allow users to log reps manually (fallback for native)
 5. **Onboarding Polish**: Better exercise preview videos/animations

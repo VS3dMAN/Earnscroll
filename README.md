@@ -273,8 +273,8 @@ Monetize your app:
 
 **Native In-App Purchases (requires Custom Development Build):**
 
-- **RevenueCat** - Cross-platform in-app purchases and subscriptions - [Expo Integration Guide](https://www.revenuecat.com/docs/expo)
-- **Expo In-App Purchases** - Direct App Store/Google Play integration - [Implementation Guide](https://docs.expo.dev/versions/latest/sdk/in-app-purchases/)
+- **Google Play Billing** via `react-native-iap` - This project's chosen path. See `services/billing.ts` for the typed integration seam.
+- **Expo In-App Purchases** - Direct Google Play integration - [Implementation Guide](https://docs.expo.dev/versions/latest/sdk/in-app-purchases/)
 
 **Paywall Optimization:**
 

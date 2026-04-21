@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Dumbbell, Activity, Timer, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTimeBank } from '@/contexts/TimeBank';
+import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
 import { colors } from '@/constants/colors';
 
 type ExerciseOption = 'squats' | 'pushups' | 'planks';
@@ -13,16 +13,53 @@ export default function OnboardingScreen() {
   const { completeOnboarding } = useTimeBank();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const autoCompletedRef = useRef(false);
+
+  useEffect(() => {
+    if (FREE_LAUNCH_MODE && !autoCompletedRef.current) {
+      autoCompletedRef.current = true;
+      (async () => {
+        await completeOnboarding();
+        router.replace('/(tabs)');
+      })();
+    }
+  }, [completeOnboarding, router]);
+
+  if (FREE_LAUNCH_MODE) return null;
 
   const handleExerciseSelect = (exercise: ExerciseOption) => {
     setSelectedExercise(exercise);
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!selectedExercise) return;
-    
-    await completeOnboarding(selectedExercise);
-    router.replace('/(tabs)');
+
+    const exerciseName = selectedExercise.charAt(0).toUpperCase() + selectedExercise.slice(1);
+
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined'
+        ? window.confirm(`You chose "${exerciseName}" as your free exercise. This cannot be changed later. Continue?`)
+        : true;
+      if (!confirmed) return;
+      completeOnboarding(selectedExercise);
+      router.replace('/(tabs)');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Your Choice',
+      `You chose "${exerciseName}" as your free exercise. This choice is permanent and cannot be changed later.\n\nYou can unlock all exercises by upgrading to Pro.`,
+      [
+        { text: 'Go Back', style: 'cancel' },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            await completeOnboarding(selectedExercise);
+            router.replace('/(tabs)');
+          },
+        },
+      ]
+    );
   };
 
   const exercises = [
@@ -62,7 +99,7 @@ export default function OnboardingScreen() {
           </View>
           <Text style={styles.title}>Welcome to EarnScroll!</Text>
           <Text style={styles.subtitle}>
-            Choose your free exercise to get started
+            Pick one exercise to use for free.{'\n'}This choice is permanent!
           </Text>
         </View>
 
@@ -133,6 +170,11 @@ export default function OnboardingScreen() {
           <View style={styles.proNote}>
             <Text style={styles.proNoteText}>
               Unlock all 3 exercises + custom ratios + full stats with Pro!
+            </Text>
+          </View>
+          <View style={styles.permanentNote}>
+            <Text style={styles.permanentNoteText}>
+              You cannot change your free exercise later. Choose wisely!
             </Text>
           </View>
         </View>
@@ -305,6 +347,22 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  permanentNote: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+  },
+  permanentNoteText: {
+    fontSize: 13,
+    color: '#EF4444',
+    fontWeight: '600' as const,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   continueButton: {
     backgroundColor: colors.primary,

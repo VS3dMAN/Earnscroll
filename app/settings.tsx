@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { Zap, ChevronRight, Wrench, Code, Lock, Crown, FileText, Shield, Sun, Moon, Smartphone, ArrowLeft } from 'lucide-react-native';
-import { useTimeBank } from '@/contexts/TimeBank';
+import { Zap, ChevronRight, Wrench, Code, Lock, Crown, FileText, Shield, Sun, Moon, Smartphone, ArrowLeft, User, LogOut } from 'lucide-react-native';
+import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
 import { useTheme } from '@/contexts/Theme';
+import { useAuth } from '@/contexts/Auth';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +21,7 @@ const EARNING_OPTIONS: EarningOption[] = [
 
 export default function SettingsScreen() {
   const { earningRatios, updateEarningRatios, isDeveloperMode, enableDeveloperMode, isUserPro } = useTimeBank();
+  const { user, isGuest, isAuthenticated, signOut } = useAuth();
   const themeContext = useTheme();
   const theme = themeContext?.theme ?? {
     background: '#F8FAFC',
@@ -98,6 +100,8 @@ export default function SettingsScreen() {
   };
 
   const handleVersionTap = () => {
+    // REMOVABLE: Developer mode gate — remove this entire handleVersionTap to disable dev options in release
+    if (FREE_LAUNCH_MODE) return; // Dev mode unreachable in launch builds
     const newTapCount = tapCount + 1;
     setTapCount(newTapCount);
 
@@ -207,6 +211,60 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <User size={20} color={accentColor} />
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Account</Text>
+          </View>
+
+          {isAuthenticated && !isGuest ? (
+            <View style={[styles.settingCard, { backgroundColor: theme.card }]}>
+              <Text style={[styles.settingLabel, { color: theme.text, marginBottom: 4 }]}>
+                {user?.email ?? user?.phone ?? 'Signed In'}
+              </Text>
+              <Text style={[styles.settingSubtitle, { color: theme.textSecondary, marginBottom: 16 }]}>
+                {user?.app_metadata?.provider === 'google'
+                  ? 'Signed in with Google'
+                  : user?.app_metadata?.provider === 'apple'
+                  ? 'Signed in with Apple'
+                  : user?.phone
+                  ? 'Signed in with Phone'
+                  : 'Signed in with Email'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.signOutButton, { borderColor: theme.danger }]}
+                onPress={() => {
+                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Sign Out', style: 'destructive', onPress: () => signOut() },
+                  ]);
+                }}
+                activeOpacity={0.7}
+              >
+                <LogOut size={16} color={theme.danger} />
+                <Text style={[styles.signOutButtonText, { color: theme.danger }]}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.settingCard, { backgroundColor: theme.card }]}>
+              <Text style={[styles.settingLabel, { color: theme.text, marginBottom: 4 }]}>Guest Mode</Text>
+              <Text style={[styles.settingSubtitle, { color: theme.textSecondary, marginBottom: 16 }]}>
+                Create an account to unlock Pro features and sync your progress.
+              </Text>
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: accentColor }]}
+                onPress={() => {
+                  signOut();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.primaryButtonText}>Create Account / Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -426,6 +484,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* REMOVABLE: Developer options section — change condition back to: __DEV__ && isDeveloperMode */}
         {isDeveloperMode && (
           <View style={styles.devSection}>
             <View style={styles.sectionHeader}>
@@ -850,5 +909,29 @@ const styles = StyleSheet.create({
   },
   themeOptionTextActive: {
     fontFamily: 'Inter_700Bold',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    height: 44,
+    gap: 8,
+  },
+  signOutButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  primaryButton: {
+    borderRadius: 12,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    color: '#000',
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
   },
 });

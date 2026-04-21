@@ -255,7 +255,7 @@ All data stored in AsyncStorage with the following keys:
 - Pro tier: Full access with multiple pricing options
 - Target market: India (₹ pricing)
 - Demo mode: All "purchases" toggle Pro status (no actual payment)
-- Future: RevenueCat integration for real subscriptions
+- Future: Google Play Billing integration for real subscriptions
 
 **Pricing Strategy**:
 - Monthly intro: ₹99 (then ₹199/month) - Low entry barrier
@@ -284,8 +284,8 @@ All data stored in AsyncStorage with the following keys:
    - Export workout data
    
 5. **Actual Payment Integration**
-   - RevenueCat for subscription management
-   - App Store / Play Store billing
+   - Google Play Billing (react-native-iap) for subscription management
+   - Play Store billing
    - Receipt validation
    
 6. **Advanced Analytics**

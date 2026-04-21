@@ -39,12 +39,6 @@ export default function WorkoutScreen() {
             <Suspense fallback={<ActivityIndicator color="#00D9FF" size="large" style={styles.loader} />}>
                 <NativeWorkoutCamera />
             </Suspense>
-            <View style={styles.overlay}>
-                <Text style={styles.title}>NATIVE WORKOUT</Text>
-                <Text style={styles.subtitle}>
-                    Camera is Live on {Platform.OS.toUpperCase()}
-                </Text>
-            </View>
         </View>
     );
 }
@@ -77,24 +71,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         fontFamily: Platform.select({ android: 'monospace', ios: 'Courier', default: 'monospace' }),
-    },
-    overlay: {
-        position: 'absolute',
-        top: 60,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-    },
-    title: {
-        color: 'white',
-        fontSize: 24,
-        fontWeight: 'bold',
-        fontFamily: Platform.select({ android: 'Roboto', default: 'System' }),
-    },
-    subtitle: {
-        color: '#aaa',
-        marginTop: 8,
-        fontSize: 14,
     },
     loader: {
         flex: 1,
