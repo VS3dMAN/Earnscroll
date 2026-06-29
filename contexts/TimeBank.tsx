@@ -5,6 +5,8 @@ import createContextHook from '@nkzw/create-context-hook';
 import { z } from 'zod';
 import {
   setSignedItem,
+  setSignedItemWithRetry,
+  setAsyncItemWithRetry,
   getSignedItem,
   setSecureItem,
   getSecureItem,
@@ -330,9 +332,9 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
 
     setEarnedMinutes(prev => {
       const newTotal = clampMinutes(prev + minutes);
-      setSignedItem(TIME_BANK_KEY, newTotal.toString()).catch(error => {
-        console.error('Failed to save time bank:', error);
-      });
+      // Retry on failure so a transient write error can't permanently desync the
+      // time bank (the app's core currency) from what's shown on screen.
+      setSignedItemWithRetry(TIME_BANK_KEY, newTotal.toString());
       return newTotal;
     });
 
@@ -382,17 +384,13 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
         updated[today][exerciseType] += amount;
       }
 
-      setSignedItem(WORKOUT_HISTORY_KEY, JSON.stringify(updated)).catch(error => {
-        console.error('Failed to save workout history:', error);
-      });
+      setSignedItemWithRetry(WORKOUT_HISTORY_KEY, JSON.stringify(updated));
 
       console.log(`✓ Added to history [${today}]:`, exerciseType, amount, '→', updated[today]);
 
       const newStreak = calculateStreakFromHistory(updated);
       setCurrentStreak(newStreak);
-      AsyncStorage.setItem(CURRENT_STREAK_KEY, newStreak.toString()).catch(error => {
-        console.error('Failed to save streak:', error);
-      });
+      setAsyncItemWithRetry(CURRENT_STREAK_KEY, newStreak.toString());
 
       return updated;
     });

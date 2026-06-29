@@ -104,6 +104,48 @@ export async function getSignedItem(storageKey: string): Promise<string | null> 
 }
 
 /**
+ * Store a signed value, retrying a few times before giving up. Use for critical
+ * values (e.g. the time bank, workout history) where a dropped write would leave
+ * in-memory state and storage permanently diverged.
+ * Returns true if the write eventually succeeded.
+ */
+export async function setSignedItemWithRetry(storageKey: string, value: string, attempts = 3): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await setSignedItem(storageKey, value);
+      return true;
+    } catch (error) {
+      if (i === attempts - 1) {
+        console.error(`Failed to persist ${storageKey} after ${attempts} attempts:`, error);
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100 * (i + 1)));
+    }
+  }
+  return false;
+}
+
+/**
+ * Plain AsyncStorage write with the same retry behavior, for non-signed values
+ * (e.g. the current streak).
+ */
+export async function setAsyncItemWithRetry(storageKey: string, value: string, attempts = 3): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await AsyncStorage.setItem(storageKey, value);
+      return true;
+    } catch (error) {
+      if (i === attempts - 1) {
+        console.error(`Failed to persist ${storageKey} after ${attempts} attempts:`, error);
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100 * (i + 1)));
+    }
+  }
+  return false;
+}
+
+/**
  * Store sensitive data in SecureStore (encrypted, hardware-backed).
  * Falls back to AsyncStorage on web.
  */

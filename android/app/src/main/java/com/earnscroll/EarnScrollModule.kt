@@ -96,6 +96,23 @@ class EarnScrollModule(reactContext: ReactApplicationContext) : ReactContextBase
     }
 
     @ReactMethod
+    fun getBlockedPackages(promise: Promise) {
+        try {
+            val prefs = getEncryptedPrefs()
+            val blockedJson = prefs.getString("blocked_packages", "[]") ?: "[]"
+            val arr = JSONArray(blockedJson)
+            val result: WritableArray = Arguments.createArray()
+            val limit = minOf(arr.length(), MAX_BLOCKED_PACKAGES)
+            for (i in 0 until limit) {
+                result.pushString(arr.getString(i))
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("ERROR", e)
+        }
+    }
+
+    @ReactMethod
     fun setMinutes(minutes: Int) {
         val clamped = minutes.coerceIn(0, MAX_MINUTES.toInt())
         val prefs = getEncryptedPrefs()

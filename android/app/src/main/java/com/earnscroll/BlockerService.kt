@@ -2,13 +2,16 @@ package com.earnscroll
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -50,8 +53,29 @@ class BlockerService : AccessibilityService() {
         }
     }
 
+    // When the screen turns off, bank the time actually used so far and stop the
+    // timer — otherwise locked-screen time would keep draining the balance.
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                deductBlockedAppTime()
+                stopExpiryCheck()
+            }
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                IntentFilter(Intent.ACTION_SCREEN_OFF),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } catch (e: Exception) {
+            Log.e("EarnScrollService", "Failed to register screen receiver", e)
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -183,6 +207,11 @@ class BlockerService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (e: Exception) {
+            // Receiver may not be registered; ignore.
+        }
         deductBlockedAppTime()
         stopExpiryCheck()
         super.onDestroy()

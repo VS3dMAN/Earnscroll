@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, LayoutChangeEvent, StyleSheet, Text, TextInput, TouchableOpacity, View, NativeModules, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/Theme';
 import { AppWindow } from 'lucide-react-native';
 
 const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
+
+// Mirror of the native `blocked_packages` list. Native (EncryptedSharedPreferences)
+// is the source of truth; this AsyncStorage copy is a fallback so the UI can paint
+// the correct toggle states immediately on mount even if the native read is slow.
+const BLOCKED_PACKAGES_KEY = '@blocked_packages';
 
 type InstalledApp = {
   label: string;
@@ -58,14 +64,58 @@ export default function TargetsScreen() {
     loadApps();
   }, []);
 
+  // Hydrate the currently-blocked list on mount. Without this, lockedTargets starts
+  // empty and the first toggle would overwrite the native blocklist with a single
+  // entry — silently un-blocking everything else. Native is the source of truth;
+  // AsyncStorage is the fallback for first paint.
+  useEffect(() => {
+    let cancelled = false;
+    async function hydrateBlocked() {
+      let blocked: string[] | null = null;
+
+      if (EarnScrollModule?.getBlockedPackages) {
+        try {
+          const native: string[] = await EarnScrollModule.getBlockedPackages();
+          if (Array.isArray(native)) blocked = native;
+        } catch (e) {
+          console.error('Failed to read native blocked packages', e);
+        }
+      }
+
+      if (blocked === null) {
+        try {
+          const stored = await AsyncStorage.getItem(BLOCKED_PACKAGES_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.every((p) => typeof p === 'string')) {
+              blocked = parsed;
+            }
+          }
+        } catch {
+          // Corrupt/missing fallback — leave as empty.
+        }
+      }
+
+      if (!cancelled && blocked !== null) {
+        setLockedTargets(blocked);
+      }
+    }
+    hydrateBlocked();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Update Native Blocker
   const updateNativeBlocker = useCallback((currentLockedTargets: string[]) => {
+    // SIMPLIFIED: Send simple array of strings ["com.foo", "com.bar"]
+    const jsonPayload = JSON.stringify(currentLockedTargets);
     if (EarnScrollModule?.setBlockedPackages) {
-      // SIMPLIFIED: Send simple array of strings ["com.foo", "com.bar"]
-      const jsonPayload = JSON.stringify(currentLockedTargets);
       EarnScrollModule.setBlockedPackages(jsonPayload);
       console.log("Sent blocklist to Native Loop:", jsonPayload);
     }
+    // Persist a fallback copy so the UI can rehydrate on next launch.
+    AsyncStorage.setItem(BLOCKED_PACKAGES_KEY, jsonPayload).catch(() => {});
   }, []);
 
   const onRootLayout = useCallback(

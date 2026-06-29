@@ -41,3 +41,8 @@ ios/
 .rork
 .env
 rork-eslint.config.js
+
+# Large binary assets — keep locally, don't commit to git
+V3.mov
+*.mov
+Master PRD.pdf

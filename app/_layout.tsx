@@ -20,6 +20,7 @@ import { TimeBankProvider, useTimeBank } from '@/contexts/TimeBank';
 import { ThemeProvider, useTheme } from '@/contexts/Theme';
 import { AuthProvider, useAuth } from '@/contexts/Auth';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -47,6 +48,7 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
     if (!isReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const onOnboarding = segments[0] === 'onboarding';
 
     if (!isAuthenticated && !isGuest && !inAuthGroup) {
       // Not logged in and not a guest — go to login
@@ -58,6 +60,10 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
       } else {
         router.replace('/(tabs)');
       }
+    } else if ((isAuthenticated || isGuest) && !hasCompletedOnboarding && !onOnboarding) {
+      // Logged in / guest but landed anywhere outside onboarding without completing
+      // it (e.g. deep link straight to a tab) — force onboarding first.
+      router.replace('/onboarding');
     }
   }, [isReady, isAuthenticated, isGuest, segments, hasCompletedOnboarding]);
 
@@ -125,12 +131,14 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <TimeBankProvider>
-          <AppContent fontsLoaded={loaded} />
-        </TimeBankProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <TimeBankProvider>
+            <AppContent fontsLoaded={loaded} />
+          </TimeBankProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
