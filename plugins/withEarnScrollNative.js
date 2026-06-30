@@ -129,6 +129,23 @@ class EarnScrollModule(reactContext: ReactApplicationContext) : ReactContextBase
     }
 
     @ReactMethod
+    fun getBlockedPackages(promise: Promise) {
+        try {
+            val prefs = getEncryptedPrefs()
+            val blockedJson = prefs.getString("blocked_packages", "[]") ?: "[]"
+            val arr = JSONArray(blockedJson)
+            val result: WritableArray = Arguments.createArray()
+            val limit = minOf(arr.length(), MAX_BLOCKED_PACKAGES)
+            for (i in 0 until limit) {
+                result.pushString(arr.getString(i))
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("ERROR", e)
+        }
+    }
+
+    @ReactMethod
     fun setMinutes(minutes: Int) {
         val clamped = minutes.coerceIn(0, MAX_MINUTES.toInt())
         val prefs = getEncryptedPrefs()
@@ -299,13 +316,16 @@ class EarnScrollPackage : ReactPackage {
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -347,8 +367,29 @@ class BlockerService : AccessibilityService() {
         }
     }
 
+    // When the screen turns off, bank the time actually used so far and stop the
+    // timer — otherwise locked-screen time would keep draining the balance.
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                deductBlockedAppTime()
+                stopExpiryCheck()
+            }
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                IntentFilter(Intent.ACTION_SCREEN_OFF),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+        } catch (e: Exception) {
+            Log.e("EarnScrollService", "Failed to register screen receiver", e)
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -480,6 +521,11 @@ class BlockerService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (e: Exception) {
+            // Receiver may not be registered; ignore.
+        }
         deductBlockedAppTime()
         stopExpiryCheck()
         super.onDestroy()
