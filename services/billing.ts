@@ -1,17 +1,16 @@
 /**
  * Google Play Billing — integration stub.
  *
- * This module is the single seam between the app and the billing provider.
- * The monetized build will integrate `react-native-iap` against products
- * configured in the Google Play Console:
- *   - pro_monthly  (auto-renewing subscription)
- *   - pro_annual   (auto-renewing subscription)
- *   - pro_lifetime (one-time INAPP product)
+ * v1.0 ships with FREE_LAUNCH_MODE = true and no billing integration.
+ * Every function throws an Error whose .message is exactly
+ * "billing_not_enabled". Call sites can string-match this to silently
+ * no-op, or it surfaces as a clear assertion in Sentry if we ever
+ * accidentally call billing in production.
  *
- * Until the SDK is installed and Play Console products are created, every
- * function throws. Callers should wrap calls in try/catch and surface the
- * error to the user. When integrating for real, replace the bodies below
- * — the call sites in app/go-pro.tsx do not need to change.
+ * When integrating for real (v1.1):
+ *   - Install react-native-iap
+ *   - Configure pro_monthly / pro_annual / pro_lifetime in Play Console
+ *   - Replace the bodies below — call sites do not need to change.
  */
 
 export type ProductId = 'pro_monthly' | 'pro_annual' | 'pro_lifetime';
@@ -29,24 +28,24 @@ export type Purchase = {
   purchaseTime: number;
 };
 
-const NOT_INTEGRATED = 'Google Play Billing is not integrated yet. Please try again after the next app update.';
+const BILLING_NOT_ENABLED = 'billing_not_enabled';
 
 export async function initBilling(): Promise<void> {
-  throw new Error(NOT_INTEGRATED);
+  throw new Error(BILLING_NOT_ENABLED);
 }
 
 export async function getProducts(): Promise<Product[]> {
-  throw new Error(NOT_INTEGRATED);
+  throw new Error(BILLING_NOT_ENABLED);
 }
 
 export async function purchaseProduct(_id: ProductId): Promise<Purchase> {
-  throw new Error(NOT_INTEGRATED);
+  throw new Error(BILLING_NOT_ENABLED);
 }
 
 export async function restorePurchases(): Promise<Purchase[]> {
-  throw new Error(NOT_INTEGRATED);
+  throw new Error(BILLING_NOT_ENABLED);
 }
 
 export async function validatePurchase(_purchase: Purchase): Promise<boolean> {
-  throw new Error(NOT_INTEGRATED);
+  throw new Error(BILLING_NOT_ENABLED);
 }

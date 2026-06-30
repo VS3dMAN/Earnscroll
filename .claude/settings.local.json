@@ -23,7 +23,13 @@
       "Bash(taskkill //F //IM \"adb.exe\")",
       "Bash(taskkill //F //IM \"java.exe\")",
       "Bash(taskkill //F //IM \"node.exe\")",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "Bash(find /e/Builds/EarnScroll -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.expo/*\" ! -path \"*/android/*\" ! -path \"*/ios/*\" -exec wc -l {} \\\\;)",
+      "Bash(grep -r \"console\\\\|log\\\\|analytics\\\\|track\\\\|event\" /e/Builds/EarnScroll --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" -l)",
+      "mcp__claude_ai_Sentry__find_organizations",
+      "mcp__claude_ai_Sentry__find_teams",
+      "mcp__claude_ai_Sentry__find_projects",
+      "mcp__claude_ai_Sentry__find_dsns"
     ],
     "deny": [
       "Bash(rm -rf:*)",

@@ -1,0 +1,272 @@
+EARNSCROLL MANUAL SETUP CHECKLIST
+Generated: 2026-05-19
+===================================
+
+Complete these in order. Steps 1-3 are BLOCKING (app won't work at all).
+Steps 4-7 are NEEDED (specific features broken). Steps 8+ are verify/polish.
+
+
+===============================
+BLOCKING — DO THESE FIRST
+===============================
+
+STEP 1 — Resume Supabase project
+---------------------------------
+The EarnScroll Supabase project is currently PAUSED (INACTIVE).
+Until resumed, ALL auth and analytics calls will silently fail.
+
+  a) Go to https://supabase.com/dashboard
+  b) Select the "EarnScroll" project (region: ap-northeast-1)
+  c) Click "Restore project" / "Resume"
+  d) Wait for status to change to ACTIVE_HEALTHY
+
+
+STEP 2 — Re-run Expo prebuild
+------------------------------
+New native packages were added (Sentry). The native Android/iOS project
+must be regenerated or the app will crash.
+
+  a) Open terminal in e:\Builds\EarnScroll
+  b) Run: npx expo prebuild --clean
+  c) Then rebuild your dev client:
+       Android: npm run android
+       iOS:     npm run ios
+  d) After prebuild, confirm the file ios/sentry.properties was created
+
+
+STEP 3 — Make SENTRY_AUTH_TOKEN available at build time
+---------------------------------------------------------
+.env has the token but Gradle won't auto-read it. Without this,
+builds succeed but Sentry stack traces will be unreadable (minified).
+
+  Option A (local builds): export the variable in your shell before building
+    Windows CMD:  set SENTRY_AUTH_TOKEN=<your_token>
+    PowerShell:   $env:SENTRY_AUTH_TOKEN="<your_token>"
+    bash/Git Bash: export SENTRY_AUTH_TOKEN=<your_token>
+
+  Option B (EAS builds): add as an EAS secret
+    Run: eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value <your_token>
+
+  Your token is already in e:\Builds\EarnScroll\.env — copy it from there.
+
+
+===============================
+NEEDED — DO BEFORE FEATURES WORK
+===============================
+
+STEP 4 — Create Supabase database tables
+------------------------------------------
+(Do this after Step 1 — project must be active first)
+
+Go to Supabase dashboard → EarnScroll project → SQL Editor
+Run the following SQL:
+
+-- Table 1: analytics_consent
+CREATE TABLE analytics_consent (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  diagnostics_enabled BOOLEAN NOT NULL DEFAULT false,
+  analytics_enabled BOOLEAN NOT NULL DEFAULT false,
+  consent_given_at TIMESTAMPTZ,
+  consent_revoked_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE analytics_consent ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own consent" ON analytics_consent
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Table 2: analytics_events
+CREATE TABLE analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_name TEXT NOT NULL,
+  event_properties JSONB DEFAULT '{}',
+  screen_name TEXT,
+  session_id UUID,
+  app_version TEXT,
+  platform TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert own events" ON analytics_events
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own events" ON analytics_events
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Table 3: diagnostic_logs
+CREATE TABLE diagnostic_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  level TEXT NOT NULL CHECK (level IN ('info', 'warn', 'error')),
+  message TEXT NOT NULL,
+  context JSONB DEFAULT '{}',
+  app_version TEXT,
+  platform TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE diagnostic_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert own logs" ON diagnostic_logs
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own logs" ON diagnostic_logs
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Table 4: user_sessions
+CREATE TABLE user_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  session_start TIMESTAMPTZ NOT NULL,
+  session_end TIMESTAMPTZ,
+  duration_seconds INTEGER,
+  app_version TEXT,
+  platform TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own sessions" ON user_sessions
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+
+STEP 5 — Configure Supabase Auth providers
+-------------------------------------------
+Go to Supabase dashboard → EarnScroll project → Authentication → Providers
+
+  a) EMAIL/PASSWORD
+     - Should be enabled by default
+     - Decide: enable "Confirm email" (recommended for production) or disable for easier testing
+
+  b) GOOGLE OAUTH
+     - Toggle Google to ON
+     - Go to Google Cloud Console → create OAuth 2.0 credentials
+     - Add authorized redirect URI: https://zurahjqghjratswjjpsg.supabase.co/auth/v1/callback
+     - Paste Client ID and Client Secret into Supabase
+
+  c) APPLE OAUTH
+     - Toggle Apple to ON
+     - Requires: Apple Developer account, Service ID, Team ID, Key ID, private key (.p8 file)
+     - Add authorized redirect URI: https://zurahjqghjratswjjpsg.supabase.co/auth/v1/callback
+     - Note: Native iOS Apple Sign In is separate (handled by expo-apple-authentication)
+
+  d) PHONE OTP
+     - Toggle Phone to ON
+     - Requires a Twilio (or Vonage/MessageBird) account
+     - Paste Account SID, Auth Token, and a phone number into Supabase
+
+  e) REDIRECT URLs
+     - Go to Authentication → URL Configuration
+     - Add to "Redirect URLs": myapp://auth/callback
+     - This must match the scheme in app.json ("scheme": "myapp")
+
+  Skip any provider you don't plan to ship — users will just get an error if they tap it.
+
+
+STEP 6 — Decide on withAppBlocker plugin
+------------------------------------------
+Two accessibility-service plugins exist but only one is registered in app.json.
+
+  Situation:
+  - plugins/withEarnScrollNative.js  → REGISTERED in app.json (injects BlockerService)
+  - plugins/withAppBlocker.js        → NOT registered (would inject AppBlockerService)
+  - Both do similar things — having both would register two accessibility services
+
+  Decision options:
+    Option A (recommended): Keep only withEarnScrollNative (already registered).
+      → Delete plugins/withAppBlocker.js and native-src/ folder if unused.
+
+    Option B: Switch to withAppBlocker.
+      → Add "./plugins/withAppBlocker" to app.json plugins array, remove withEarnScrollNative,
+        re-run prebuild.
+
+    Option C: Keep both (not recommended — two accessibility services for same purpose).
+
+  After deciding and making any changes, re-run: npx expo prebuild --clean
+
+
+STEP 7 — Set up EAS build + app signing
+-----------------------------------------
+Currently no eas.json exists. Needed for production / TestFlight / Play Store builds.
+
+  a) Run: eas build:configure
+     (Follow the prompts — it will create eas.json)
+
+  b) Android signing keystore:
+     - Run: eas credentials  (to generate or upload a keystore)
+     - Or provide your existing keystore if you have one
+
+  c) iOS provisioning (when ready for iOS):
+     - Run: eas credentials  (select iOS, follow Apple sign-in prompts)
+     - Requires Apple Developer account ($99/year)
+
+
+===============================
+VERIFY — CHECK THESE WORK
+===============================
+
+STEP 8 — Test auth end-to-end
+-------------------------------
+  [ ] Sign up with email → receive confirmation email (if enabled) → sign in
+  [ ] Sign in with Google → browser opens → redirects back into app
+  [ ] Sign in with Apple (iOS device only) → native prompt → redirects back
+  [ ] "Continue as Guest" → app loads without auth
+  [ ] Sign out → returns to login screen
+
+STEP 9 — Test analytics + consent flow
+----------------------------------------
+  [ ] New user signs in → ConsentPrompt appears
+  [ ] Accept analytics → rows appear in analytics_consent and user_sessions tables
+  [ ] Decline → no rows written, Sentry not initialized
+  [ ] Open Settings → find Analytics/Privacy toggle → can change consent
+  [ ] Consent prompt does NOT reappear after accepting/declining
+
+STEP 10 — Test Sentry (production build only)
+----------------------------------------------
+Note: Sentry is disabled in dev builds (enabled: !__DEV__ in services/sentry.ts).
+Use a release/preview build for this test.
+
+  [ ] Accept diagnostics consent
+  [ ] Trigger a test error
+  [ ] Check https://vs3dman.sentry.io/issues/ for the EarnScroll project
+  [ ] Stack trace should be readable (not minified) — confirms sourcemap upload works
+
+STEP 11 — Test app blocker on Android
+---------------------------------------
+  [ ] Install on real Android device (emulator won't work for accessibility)
+  [ ] App prompts to enable accessibility service → open Settings → enable EarnScroll
+  [ ] Earn some minutes, then let them run out (or set to 0 in dev mode)
+  [ ] Open a blocked app → EarnScroll should intercept it
+
+STEP 12 — Review privacy policy + terms of service
+----------------------------------------------------
+  [ ] Open app/privacy-policy.tsx — confirm it has real content (not placeholder)
+  [ ] Open app/terms-of-service.tsx — confirm it has real content (not placeholder)
+  [ ] Both are required by Apple App Store and Google Play before submission
+
+STEP 13 — Google Play QUERY_ALL_PACKAGES justification
+--------------------------------------------------------
+The app declares android.permission.QUERY_ALL_PACKAGES in app.json.
+Google requires a written justification at Play Console submission time.
+
+  Prepare text like:
+  "EarnScroll requires QUERY_ALL_PACKAGES to enumerate all installed apps
+  so users can select which apps to block when their earned screen time runs out.
+  This is the core functionality of the app's parental/self-control feature."
+
+
+===============================
+SUMMARY TABLE
+===============================
+
+Priority  | Step | Task
+--------- | ---- | ----
+BLOCKING  |  1   | Resume Supabase project (PAUSED right now)
+BLOCKING  |  2   | Run expo prebuild --clean after Sentry install
+BLOCKING  |  3   | Export SENTRY_AUTH_TOKEN at build time
+NEEDED    |  4   | Create 4 analytics tables in Supabase with RLS
+NEEDED    |  5   | Configure Auth providers + redirect URL in Supabase
+NEEDED    |  6   | Decide withAppBlocker vs withEarnScrollNative (one or both?)
+NEEDED    |  7   | Set up eas.json + signing (before store submission)
+VERIFY    |  8   | Test auth flows end-to-end
+VERIFY    |  9   | Test analytics consent flow + table writes
+VERIFY    | 10   | Test Sentry in a release build
+VERIFY    | 11   | Test app blocker on real Android device
+VERIFY    | 12   | Review privacy policy + terms content
+VERIFY    | 13   | Prepare QUERY_ALL_PACKAGES justification for Play Store

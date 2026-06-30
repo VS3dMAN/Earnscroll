@@ -2,10 +2,13 @@ const {
     withAndroidManifest,
     withMainApplication,
     withDangerousMod,
+    withStringsXml,
     AndroidConfig
 } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
+
+const ACCESSIBILITY_DESCRIPTION = "EarnScroll observes which app is in the foreground to block distracting apps you've selected when your earned-time bank is empty. It does not read screen content, text input, or any other app data.";
 
 const withEarnScrollNative = (config) => {
 
@@ -196,6 +199,17 @@ class EarnScrollModule(reactContext: ReactApplicationContext) : ReactContextBase
         val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         reactApplicationContext.startActivity(intent)
+    }
+
+    @ReactMethod
+    fun clearSecurePrefs(promise: Promise) {
+        try {
+            val prefs = getEncryptedPrefs()
+            prefs.edit().clear().apply()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("ERROR", e)
+        }
     }
 
     @ReactMethod
@@ -620,7 +634,8 @@ class BlockedActivity : Activity() {
             // E. accessibility_service_config.xml
             const xmlContent = `<?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:description="@string/app_name"
+    android:description="@string/accessibility_service_description"
+    android:summary="@string/accessibility_service_description"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="100"
@@ -632,10 +647,45 @@ class BlockedActivity : Activity() {
         }
     ]);
 
+    // 2.5. Register strings.xml entry for accessibility service description
+    config = withStringsXml(config, (config) => {
+        const strings = config.modResults;
+        strings.resources = strings.resources || {};
+        strings.resources.string = strings.resources.string || [];
+        // Remove any prior entry to keep the value canonical
+        strings.resources.string = strings.resources.string.filter(
+            (s) => s.$.name !== 'accessibility_service_description'
+        );
+        strings.resources.string.push({
+            $: { name: 'accessibility_service_description', translatable: 'false' },
+            _: ACCESSIBILITY_DESCRIPTION,
+        });
+        return config;
+    });
+
     // 3. Register Service in AndroidManifest.xml (Safe JSON Manipulation)
     config = withAndroidManifest(config, async (config) => {
         const androidManifest = config.modResults;
         const mainApplication = AndroidConfig.Manifest.getMainApplicationOrThrow(androidManifest);
+
+        // Manifest-merger removals for transitively-added storage permissions.
+        // Belt-and-braces with app.json android.blockedPermissions.
+        androidManifest.manifest.$['xmlns:tools'] = androidManifest.manifest.$['xmlns:tools'] || 'http://schemas.android.com/tools';
+        androidManifest.manifest['uses-permission'] = androidManifest.manifest['uses-permission'] || [];
+        const storageRemovals = [
+            'android.permission.READ_EXTERNAL_STORAGE',
+            'android.permission.WRITE_EXTERNAL_STORAGE',
+        ];
+        for (const perm of storageRemovals) {
+            const already = androidManifest.manifest['uses-permission'].find(
+                (p) => p.$['android:name'] === perm && p.$['tools:node'] === 'remove'
+            );
+            if (!already) {
+                androidManifest.manifest['uses-permission'].push({
+                    $: { 'android:name': perm, 'tools:node': 'remove' },
+                });
+            }
+        }
 
         const service = {
             $: {

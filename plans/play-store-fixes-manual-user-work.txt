@@ -1,0 +1,270 @@
+================================================================================
+EARNSCROLL — PLAY STORE FIXES: MANUAL USER WORK REPORT
+Generated: 2026-05-22
+Source plan: plans/play-store-fixes-plan.txt (executed 2026-05-22)
+================================================================================
+
+This document lists EVERYTHING that still has to be done by hand to ship the
+v1.0 closed test. The in-repo changes are merged; the remaining work all
+lives outside the repo: Supabase dashboard, Google Play Console, your domain
+registrar, EAS, and a handful of demo videos.
+
+Items are grouped by where you do them and ordered so that each step is
+unblocked by the previous one. Estimated total clock time: ~6-10 hours of
+your active work, spread across at least 14 days of waiting (closed test).
+
+--------------------------------------------------------------------------------
+WHAT THE REPO ALREADY DOES (so you don't redo it by hand)
+--------------------------------------------------------------------------------
+  - Pro/billing screen is hidden in v1.0 (FREE_LAUNCH_MODE = true).
+  - /go-pro deep link hard-redirects to / so reviewers cannot surface prices.
+  - READ/WRITE_EXTERNAL_STORAGE removed via app.json blockedPermissions +
+    manifest-merger overrides in plugins/withEarnScrollNative.js.
+  - SYSTEM_ALERT_WINDOW + accessibility_service_description string added.
+  - Accessibility disclosure full-screen prompt at app/accessibility-disclosure.tsx
+    (replaces the old Alert).
+  - Camera pre-permission card in components/NativeWorkoutCamera.tsx (no
+    auto requestPermission anymore).
+  - Onboarding "permanent choice" copy replaced with "switch later from Settings".
+  - Settings → Free Exercise switcher wired to updateFreeExercise().
+  - Sentry tightened: enableAutoSessionTracking=false, sendDefaultPii=false,
+    tracesSampleRate=0.1, profilesSampleRate=0, beforeSend strips PII +
+    drops events when consent is revoked, release/dist tags populated.
+  - In-app Delete Account flow at app/delete-account.tsx (Settings → Delete
+    Account → type DELETE → confirm).
+  - Supabase Edge Function source at supabase/functions/delete-account/index.ts.
+  - RLS migration at supabase/migrations/20260521_rls_audit.sql and a
+    verification doc at docs/supabase-rls-checklist.md.
+  - Final legal text in app/privacy-policy.tsx, app/terms-of-service.tsx,
+    constants/legal.ts, and matching HTML in legal/.
+  - Data Safety form answer key at legal/data-safety-form-guide.html.
+  - Permission Declaration text at legal/play-permission-declarations.md.
+
+If any of the above stops being true (e.g. you flip FREE_LAUNCH_MODE to
+false later), the manual checklist below changes — re-read it.
+
+
+================================================================================
+A. SUPABASE DASHBOARD WORK (~30 min)
+================================================================================
+
+A.1  Apply the RLS migration
+     - Open Supabase Studio → SQL Editor.
+     - Paste the contents of supabase/migrations/20260521_rls_audit.sql.
+     - Run. It is idempotent; re-running is safe.
+     - Alternatively from the CLI: `supabase db push`.
+
+A.2  Verify RLS using docs/supabase-rls-checklist.md
+     - Walk every query in sections 2, 3, 4.
+     - Every user-scoped table MUST report `rls_enabled = true`.
+     - The anon role MUST NOT be able to read user rows.
+     - If any check fails, fix it in the migration and re-apply BEFORE
+       deploying the Edge Function.
+
+A.3  Create the service-role secret for the Edge Function
+     - Supabase Dashboard → Project Settings → API → copy the service_role key.
+     - From the CLI:
+         supabase secrets set SUPABASE_URL=https://<project-ref>.supabase.co
+         supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<paste-from-dashboard>
+       (Newer Supabase versions populate SUPABASE_URL automatically; check
+       `supabase secrets list` first.)
+
+A.4  Deploy the Delete Account Edge Function
+     - From repo root:
+         supabase functions deploy delete-account
+     - Test from your local dev build:
+         a) Sign in with a throwaway account.
+         b) Generate at least one analytics event (just tap around the app).
+         c) Settings → Delete Account → type DELETE → confirm.
+         d) Confirm the app returns to /onboarding and you are signed out.
+     - Then run the deletion verification SQL block at section 5 of
+       docs/supabase-rls-checklist.md to confirm every user-scoped table is
+       empty for that user_id and that auth.users no longer contains them.
+
+A.5  (Optional but recommended) Set up Supabase backup retention to 45 days
+     so it matches the retention statement in the Privacy Policy.
+
+
+================================================================================
+B. DOMAIN + WEB HOSTING (~1-2 hours)
+================================================================================
+
+B.1  Register earnscroll.com (or whatever final domain you pick).
+     - The legal copy and Data Safety form both reference this domain.
+     - If you pick a different domain, update WEB_LEGAL_URLS in
+       constants/legal.ts AND in legal/*.html AND in
+       legal/data-safety-form-guide.html (section 4).
+
+B.2  Host the three HTML files publicly:
+       - legal/privacy-policy.html        → https://<domain>/privacy
+       - legal/terms-of-service.html      → https://<domain>/terms
+       - legal/data-safety-form-guide.html → keep this private; it's an
+         internal answer key. Do NOT host publicly.
+
+B.3  Add a /delete-account public web page that explains the email-based
+     deletion path for users who cannot or will not sign in. Required by
+     Google Play account-deletion policy. Minimum content:
+       - "To delete your EarnScroll account, sign in to the app and go to
+          Settings → Delete Account. If you can no longer access the app,
+          email privacy@earnscroll.com from the address used to sign up.
+          We will action your request within 30 days."
+
+B.4  Flip the WEB_LEGAL_HOSTED constant
+     - Open constants/legal.ts.
+     - Change `WEB_LEGAL_HOSTED = false` to `true`.
+     - This removes the "URL will be available before production release"
+       banner from the in-app screens.
+     - Bump LAST_UPDATED_DATE if the policy text changes at the same time.
+
+
+================================================================================
+C. EAS / BUILD CONFIG (~30 min)
+================================================================================
+
+C.1  Add SENTRY_AUTH_TOKEN to EAS secrets
+     - Generate one in Sentry: User Settings → Auth Tokens → "Project Releases".
+     - Run: `eas secret:create --scope project --name SENTRY_AUTH_TOKEN`.
+     - This enables source-map upload on every release build.
+
+C.2  Confirm android/sentry.properties is NOT committed.
+     - It is now in .gitignore (added in Phase 7).
+     - Run: `git status --ignored` and verify.
+
+C.3  Run `npx expo prebuild --clean` once locally, then grep the generated
+     AndroidManifest.xml:
+       - READ_EXTERNAL_STORAGE must be absent or have tools:node="remove".
+       - WRITE_EXTERNAL_STORAGE must be absent or have tools:node="remove".
+       - The accessibility_service_description string must be defined in
+         android/app/src/main/res/values/strings.xml and referenced by
+         android/app/src/main/res/xml/accessibility_service_config.xml.
+
+C.4  Cut a release AAB
+       eas build --profile production --platform android
+     - Wait for it to finish, then download the AAB.
+
+C.5  16 KB page-size alignment check on the .so files in the AAB:
+     - Extract the AAB and run apkanalyzer (from Android SDK):
+         apkanalyzer files cat -- AAB-PATH lib/arm64-v8a/libreanimated.so | head
+     - Better: use the Play Console's pre-launch report — it will surface
+       any 16 KB alignment failures automatically.
+
+
+================================================================================
+D. PLAY CONSOLE — ONE-TIME SETUP (~2-3 hours, includes verification waits)
+================================================================================
+
+D.1  Create the Play Console developer account
+     - Pay the ₹2,100 registration fee.
+     - Identity verification typically takes 24-48 hours. You CANNOT
+       upload an APK before this completes.
+
+D.2  Create the EarnScroll listing
+     - Use package name: com.earnscroll.app
+     - Confirm the name is still available BEFORE pressing "Create" by
+       opening play.google.com/store/apps/details?id=com.earnscroll.app
+       in an incognito tab — if it returns 404, the name is unclaimed.
+
+D.3  Fill the Data Safety form
+     - Open legal/data-safety-form-guide.html in a browser. Every row in
+       Section 1 maps to one Play Console question — copy the answers
+       verbatim. Read every "Reviewer-trap callout" at the end carefully.
+     - Privacy Policy URL: https://<domain>/privacy (must be live first).
+
+D.4  Submit each Permission Declaration form
+     Use the text from legal/play-permission-declarations.md.
+     - QUERY_ALL_PACKAGES → category "Apps with core functionality that
+       requires showing the list of installed apps".
+     - BIND_ACCESSIBILITY_SERVICE → declares the accessibility service
+       and includes a link to a hosted demo video.
+     - SYSTEM_ALERT_WINDOW → only if you choose to keep it after testing
+       whether BlockedActivity is sufficient. If you can remove it, do.
+     - PACKAGE_USAGE_STATS → declares the on-device usage breakdown panel.
+
+D.5  Record the demo videos (one per declaration above).
+     Recording tips:
+       - Use a real device, not an emulator (Play sometimes rejects emulator
+         captures).
+       - Keep each video under 30 seconds.
+       - Show only the relevant flow described in
+         legal/play-permission-declarations.md "Demo video must show" lines.
+       - Host on YouTube as Unlisted and paste the URL into Play Console.
+
+D.6  Content Rating questionnaire
+     - Expect Everyone or Everyone 10+ (no violence, no profanity, no UGC).
+     - Mark "user-to-user interaction" = No.
+
+D.7  Configure the pre-launch report
+     - Play Console → Setup → Pre-launch report.
+     - Add the email + password of a throwaway test account so Robo can
+       sign in. Without this, Robo never gets past the login screen.
+
+D.8  Configure a 14-day closed test track
+     - Internal testing → Closed testing → Create a track.
+     - Recruit 12 testers (real Gmail accounts, India-region SIMs make this
+       easier given the INR pricing).
+     - Add them to a Google Group, invite the group to the track.
+     - The closed test must run continuously for 14 days BEFORE you can
+       open production review for a new developer account.
+
+
+================================================================================
+E. POST-CLOSED-TEST: PRODUCTION REVIEW (~varies, days-to-weeks)
+================================================================================
+
+E.1  After 14 days of closed testing, click "Promote to production".
+E.2  Review questionnaire — should be straightforward because Data Safety
+     and Permission Declarations were already accepted during the closed
+     test.
+E.3  Wait for review. First reviews usually take 3-7 days; expect 1-2
+     iterations of "please tighten X".
+
+
+================================================================================
+F. ONGOING MAINTENANCE — DO NOT FORGET
+================================================================================
+
+F.1  Any new Supabase table that stores user rows MUST be added to:
+       - supabase/migrations/<next-date>_rls_audit.sql
+       - The Edge Function's `steps` array in
+         supabase/functions/delete-account/index.ts
+       - The Privacy Policy section "Data We Collect"
+       - The Data Safety form answers
+     Reviewer audits will catch divergence here.
+
+F.2  If you add a new analytics event that includes anything beyond an
+     enum value (e.g. user-typed text), declare it in Data Safety and
+     verify it is stripped/encrypted in transit.
+
+F.3  If you change Sentry sample rates, the consent flow, or the
+     beforeSend filter, re-test consent revocation: toggle diagnostics
+     off, then force a JS error, then check the Sentry inbox to confirm
+     nothing arrived.
+
+F.4  If you flip FREE_LAUNCH_MODE = false (for v1.1 with billing):
+       - The Terms section "5. Free Tier & Future Pro Tier" must be
+         updated to describe pricing.
+       - The Data Safety form must add "Financial info" as collected
+         (Google Play Billing transaction tokens, not card numbers).
+       - Re-trigger the in-app legal "Last Updated" banner so existing
+         users see the change.
+
+
+================================================================================
+G. SANITY CHECKLIST BEFORE PRESSING "SUBMIT FOR REVIEW"
+================================================================================
+[ ] Domain is live; /privacy, /terms, /delete-account return 200.
+[ ] constants/legal.ts WEB_LEGAL_HOSTED = true and date matches HTML.
+[ ] Supabase RLS migration applied; docs/supabase-rls-checklist.md
+    section 2 query shows rls_enabled = true for every listed table.
+[ ] Edge Function delete-account deployed and tested end-to-end.
+[ ] EAS build profile = production succeeds with no warnings about
+    missing source-maps.
+[ ] App installs cleanly on a Pixel 6/7 (16 KB page size device).
+[ ] Robo pre-launch report completes without crashing.
+[ ] All four permission demo videos hosted on YouTube as Unlisted, URLs
+    pasted into Play Console.
+[ ] Closed test has been running continuously for ≥ 14 days.
+[ ] No ₹ symbol or "Pro" upsell visible anywhere in the running v1.0 build
+    (grep confirms; manual smoke-test confirms).
+
+End of report.

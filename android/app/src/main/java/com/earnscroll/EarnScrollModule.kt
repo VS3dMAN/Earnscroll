@@ -169,6 +169,17 @@ class EarnScrollModule(reactContext: ReactApplicationContext) : ReactContextBase
     }
 
     @ReactMethod
+    fun clearSecurePrefs(promise: Promise) {
+        try {
+            val prefs = getEncryptedPrefs()
+            prefs.edit().clear().apply()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.reject("ERROR", e)
+        }
+    }
+
+    @ReactMethod
     fun getAppUsageToday(promise: Promise) {
         try {
             val usm = reactApplicationContext.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Dumbbell, Activity, Timer, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
+import { useAnalytics } from '@/contexts/Analytics';
 import { colors } from '@/constants/colors';
 
 type ExerciseOption = 'squats' | 'pushups' | 'planks';
@@ -11,6 +12,7 @@ type ExerciseOption = 'squats' | 'pushups' | 'planks';
 export default function OnboardingScreen() {
   const [selectedExercise, setSelectedExercise] = useState<ExerciseOption | null>(null);
   const { completeOnboarding } = useTimeBank();
+  const { trackEvent } = useAnalytics();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const autoCompletedRef = useRef(false);
@@ -38,9 +40,10 @@ export default function OnboardingScreen() {
 
     if (Platform.OS === 'web') {
       const confirmed = typeof window !== 'undefined'
-        ? window.confirm(`You chose "${exerciseName}" as your free exercise. This cannot be changed later. Continue?`)
+        ? window.confirm(`You chose "${exerciseName}" as your free exercise. You can switch it later from Settings. Continue?`)
         : true;
       if (!confirmed) return;
+      trackEvent('onboarding_completed', { selected_exercise: selectedExercise });
       completeOnboarding(selectedExercise);
       router.replace('/(tabs)');
       return;
@@ -48,12 +51,13 @@ export default function OnboardingScreen() {
 
     Alert.alert(
       'Confirm Your Choice',
-      `You chose "${exerciseName}" as your free exercise. This choice is permanent and cannot be changed later.\n\nYou can unlock all exercises by upgrading to Pro.`,
+      `You chose "${exerciseName}" as your free exercise. You can switch your free exercise later from Settings.`,
       [
         { text: 'Go Back', style: 'cancel' },
         {
           text: 'Confirm',
           onPress: async () => {
+            trackEvent('onboarding_completed', { selected_exercise: selectedExercise });
             await completeOnboarding(selectedExercise);
             router.replace('/(tabs)');
           },
@@ -99,7 +103,7 @@ export default function OnboardingScreen() {
           </View>
           <Text style={styles.title}>Welcome to EarnScroll!</Text>
           <Text style={styles.subtitle}>
-            Pick one exercise to use for free.{'\n'}This choice is permanent!
+            Pick one exercise to use for free.{'\n'}You can switch it later from Settings.
           </Text>
         </View>
 
@@ -174,7 +178,7 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.permanentNote}>
             <Text style={styles.permanentNoteText}>
-              You cannot change your free exercise later. Choose wisely!
+              You can switch your free exercise later from Settings.
             </Text>
           </View>
         </View>

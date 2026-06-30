@@ -7,6 +7,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '@/utils/supabase';
 import { getAuthErrorMessage } from '@/utils/authErrors';
+import { addBreadcrumb } from '@/services/sentry';
 import type { Session, User } from '@supabase/supabase-js';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -51,10 +52,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     init();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       setSession(newSession);
       setUser(newSession?.user ?? null);
+      addBreadcrumb({ category: 'auth', message: event, level: 'info' });
       // If user signs in, clear guest mode
       if (newSession) {
         setIsGuest(false);

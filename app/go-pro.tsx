@@ -6,6 +6,7 @@ import { Crown, Dumbbell, TrendingUp, Calendar, Settings as SettingsIcon, X, Che
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
 import { useAuth } from '@/contexts/Auth';
+import { useAnalytics } from '@/contexts/Analytics';
 import { cloudyGrey, industrialBackground, industrialCard } from '@/constants/colors';
 import { purchaseProduct, type ProductId } from '@/services/billing';
 
@@ -21,12 +22,18 @@ export default function GoProScreen() {
   const insets = useSafeAreaInsets();
   const { isDeveloperMode } = useTimeBank();
   const { isGuest, isAuthenticated } = useAuth();
+  const { trackEvent, trackScreenView } = useAnalytics();
   const [selectedPlan, setSelectedPlan] = React.useState<'monthly' | 'annual' | 'lifetime'>('annual');
+
+  React.useEffect(() => {
+    trackScreenView('go_pro');
+    trackEvent('go_pro_viewed');
+  }, []);
   const isAnnualSelected = selectedPlan === 'annual';
 
   React.useEffect(() => {
     if (FREE_LAUNCH_MODE) {
-      router.back();
+      router.replace('/');
     }
   }, [router]);
 
@@ -39,6 +46,7 @@ export default function GoProScreen() {
     console.log(`[GO PRO] User selected product: ${productId}`);
     try {
       await purchaseProduct(productId);
+      trackEvent('go_pro_purchased', { product_id: productId });
       // On success the billing module / receipt validator will flip isUserPro.
       router.back();
     } catch (err) {

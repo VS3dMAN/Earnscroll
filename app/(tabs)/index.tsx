@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTimeBank, DailyWorkout } from '@/contexts/TimeBank';
 import { useTheme } from '@/contexts/Theme';
+import { useAnalytics } from '@/contexts/Analytics';
 import { cloudyGrey } from '@/constants/colors';
 
 const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
@@ -23,6 +24,11 @@ const CLOUDY_GREY_60 = cloudyGreyOpacity(0.6);
 
 export default function DashboardScreen() {
   const { earnedMinutes, earningRatios, isLoading, resetTimeBank, currentStreak, emergencyPausesRemaining, triggerEmergencyPause, workoutHistory, isUserPro, isDeveloperMode } = useTimeBank();
+  const { trackEvent, trackScreenView } = useAnalytics();
+
+  useEffect(() => {
+    trackScreenView('dashboard');
+  }, []);
   const themeContext = useTheme();
   const theme = themeContext?.theme ?? {
     background: '#F8FAFC',
@@ -118,6 +124,7 @@ export default function DashboardScreen() {
     try {
       const result = await triggerEmergencyPause();
       if (result.success) {
+        trackEvent('emergency_pause_used', { pauses_remaining: emergencyPausesRemaining - 1 });
         Alert.alert('Emergency Access Granted', result.message, [{ text: 'OK' }]);
       } else {
         Alert.alert('Unable to Use Emergency Access', result.message, [{ text: 'OK' }]);

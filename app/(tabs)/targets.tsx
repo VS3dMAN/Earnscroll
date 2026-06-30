@@ -3,6 +3,7 @@ import { Alert, FlatList, LayoutChangeEvent, StyleSheet, Text, TextInput, Toucha
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/Theme';
+import { useAnalytics } from '@/contexts/Analytics';
 import { AppWindow } from 'lucide-react-native';
 
 const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
@@ -23,6 +24,11 @@ function normalizeQuery(text: string): string {
 export default function TargetsScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { trackScreenView } = useAnalytics();
+
+  useEffect(() => {
+    trackScreenView('targets');
+  }, []);
 
   const [installedApps, setInstalledApps] = useState<InstalledApp[]>([]);
   const [lockedTargets, setLockedTargets] = useState<string[]>([]);

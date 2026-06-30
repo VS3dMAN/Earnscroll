@@ -16,10 +16,11 @@ import {
 
 const EarnScrollModule = Platform.OS !== 'web' ? NativeModules.EarnScrollModule : null;
 
-// LAUNCH MODE — unlock every Pro feature for everyone.
-// Flip to `false` after payment integration is ready; the Free/Pro split
-// below returns to its original behavior with zero other code changes.
-export const FREE_LAUNCH_MODE = true;
+// Re-exported from constants/feature-flags.ts (single source of truth).
+// Keep this re-export so existing call sites that import from
+// '@/contexts/TimeBank' don't need to change.
+export { FREE_LAUNCH_MODE } from '@/constants/feature-flags';
+import { FREE_LAUNCH_MODE } from '@/constants/feature-flags';
 
 const EarningRatiosSchema = z.object({
   squats: z.number().min(0).max(LIMITS.MAX_EARNING_RATIO),
@@ -512,6 +513,12 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
     return newProStatus;
   }, [isUserPro]);
 
+  const updateFreeExercise = useCallback(async (exercise: 'squats' | 'pushups' | 'planks') => {
+    if (!VALID_FREE_EXERCISES.includes(exercise)) return;
+    setUserFreeExercise(exercise);
+    await AsyncStorage.setItem(USER_FREE_EXERCISE_KEY, exercise);
+  }, []);
+
   const completeOnboarding = useCallback(async (selectedExercise: 'squats' | 'pushups' | 'planks' = 'squats') => {
     setUserFreeExercise(selectedExercise);
     setHasCompletedOnboarding(true);
@@ -579,6 +586,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       toggleProStatus,
       completeOnboarding,
       resetOnboarding,
+      updateFreeExercise,
     }),
     [
       earnedMinutes,
@@ -608,6 +616,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
       toggleProStatus,
       completeOnboarding,
       resetOnboarding,
+      updateFreeExercise,
     ]
   );
 });

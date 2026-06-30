@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { Zap, ChevronRight, Wrench, Code, Lock, Crown, FileText, Shield, Sun, Moon, Smartphone, ArrowLeft, User, LogOut } from 'lucide-react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform, NativeModules } from 'react-native';
+import { Zap, ChevronRight, Wrench, Code, Lock, Crown, FileText, Shield, Sun, Moon, Smartphone, ArrowLeft, User, LogOut, Trash2, Activity, Dumbbell, Timer } from 'lucide-react-native';
 import { useTimeBank, FREE_LAUNCH_MODE } from '@/contexts/TimeBank';
 import { useTheme } from '@/contexts/Theme';
 import { useAuth } from '@/contexts/Auth';
+import { useAnalytics } from '@/contexts/Analytics';
+import { AnalyticsSettings } from '@/components/AnalyticsSettings';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,8 +22,15 @@ const EARNING_OPTIONS: EarningOption[] = [
 ];
 
 export default function SettingsScreen() {
-  const { earningRatios, updateEarningRatios, isDeveloperMode, enableDeveloperMode, isUserPro } = useTimeBank();
+  const { earningRatios, updateEarningRatios, isDeveloperMode, enableDeveloperMode, isUserPro, userFreeExercise, updateFreeExercise } = useTimeBank();
   const { user, isGuest, isAuthenticated, signOut } = useAuth();
+  const { trackEvent, trackScreenView } = useAnalytics();
+
+  useEffect(() => {
+    trackScreenView('settings');
+    trackEvent('settings_opened');
+  }, []);
+
   const themeContext = useTheme();
   const theme = themeContext?.theme ?? {
     background: '#F8FAFC',
@@ -266,6 +275,98 @@ export default function SettingsScreen() {
             </View>
           )}
         </View>
+
+        {/* Privacy & Data Section — only for authenticated non-guest users */}
+        {isAuthenticated && !isGuest && (
+          <AnalyticsSettings theme={theme} />
+        )}
+
+        {/* Free Exercise switcher — replaces the old "permanent choice" promise */}
+        {!isUserPro && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Dumbbell size={20} color={accentColor} />
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Free Exercise</Text>
+            </View>
+            <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+              Pick which exercise you use for free. Switch any time.
+            </Text>
+            <View style={[styles.settingCard, { backgroundColor: theme.card }]}>
+              <View style={[styles.themeSelector, { gap: 8 }]}>
+                {([
+                  { id: 'squats', label: 'Squats', Icon: Activity },
+                  { id: 'pushups', label: 'Pushups', Icon: Dumbbell },
+                  { id: 'planks', label: 'Planks', Icon: Timer },
+                ] as const).map(({ id, label, Icon }) => {
+                  const active = userFreeExercise === id;
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={[
+                        styles.themeOption,
+                        { backgroundColor: theme.background, borderColor: theme.border },
+                        active && { backgroundColor: accentColor, borderColor: accentColor },
+                      ]}
+                      onPress={() => updateFreeExercise(id)}
+                      activeOpacity={0.7}
+                    >
+                      <Icon size={18} color={active ? '#000' : theme.textSecondary} />
+                      <Text style={[styles.themeOptionText, { color: active ? '#000' : theme.textSecondary }]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* App Blocker (Android only) — manually re-trigger the disclosure */}
+        {Platform.OS === 'android' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Shield size={20} color={accentColor} />
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>App Blocker</Text>
+            </View>
+            <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+              Block distracting apps when your earned time runs out.
+            </Text>
+            <TouchableOpacity
+              style={[styles.legalButton, { backgroundColor: theme.card, marginTop: 0 }]}
+              onPress={() => router.push('/accessibility-disclosure')}
+              activeOpacity={0.7}
+              testID="settings-app-blocker-button"
+            >
+              <Shield size={18} color={theme.textSecondary} />
+              <Text style={[styles.legalButtonText, { color: theme.textSecondary }]}>Enable or review permission</Text>
+              <ChevronRight size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Delete Account — only for authenticated non-guest users */}
+        {isAuthenticated && !isGuest && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Trash2 size={20} color={theme.danger} />
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Delete Account</Text>
+            </View>
+            <Text style={[styles.sectionDescription, { color: theme.textSecondary }]}>
+              Permanently delete your account and all associated data.
+            </Text>
+            <TouchableOpacity
+              style={[styles.legalButton, { backgroundColor: theme.card, marginTop: 0, borderWidth: 1, borderColor: theme.danger + '40' }]}
+              onPress={() => router.push('/delete-account')}
+              activeOpacity={0.7}
+              testID="settings-delete-account-button"
+            >
+              <Trash2 size={18} color={theme.danger} />
+              <Text style={[styles.legalButtonText, { color: theme.danger }]}>Delete account</Text>
+              <ChevronRight size={16} color={theme.danger} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

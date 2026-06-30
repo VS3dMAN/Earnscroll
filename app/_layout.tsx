@@ -4,7 +4,8 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Platform, Alert, NativeModules } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Fonts
 import {
   Inter_400Regular,
@@ -20,6 +21,8 @@ import { TimeBankProvider, useTimeBank } from '@/contexts/TimeBank';
 import { ThemeProvider, useTheme } from '@/contexts/Theme';
 import { AuthProvider, useAuth } from '@/contexts/Auth';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AnalyticsProvider } from '@/contexts/Analytics';
+import { ConsentPrompt } from '@/components/ConsentPrompt';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,7 +65,10 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
   }, [isReady, isAuthenticated, isGuest, segments, hasCompletedOnboarding]);
 
   useEffect(() => {
+    if (!isReady) return;
     if (Platform.OS !== 'android') return;
+    if (!isAuthenticated && !isGuest) return;
+    if (!hasCompletedOnboarding) return;
 
     const checkAccessibility = async () => {
       try {
@@ -70,26 +76,22 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
         if (!EarnScrollModule) return;
 
         const enabled = await EarnScrollModule.isAccessibilityServiceEnabled();
-        if (!enabled) {
-          Alert.alert(
-            'Enable App Blocker',
-            'EarnScroll needs accessibility access to block distracting apps when your time runs out. Please enable "EarnScroll" in the next screen.',
-            [
-              { text: 'Later', style: 'cancel' },
-              {
-                text: 'Open Settings',
-                onPress: () => EarnScrollModule.openAccessibilitySettings(),
-              },
-            ]
-          );
-        }
-      } catch (e) {
+        if (enabled) return;
+
+        // Only prompt the disclosure screen once per install — the user can
+        // re-trigger it from Settings if they decline now.
+        const alreadyPrompted = await AsyncStorage.getItem('accessibility_disclosure_shown_v1');
+        if (alreadyPrompted) return;
+        await AsyncStorage.setItem('accessibility_disclosure_shown_v1', new Date().toISOString());
+
+        router.push('/accessibility-disclosure');
+      } catch {
         // Native module not available (e.g. Expo Go), skip silently
       }
     };
 
     checkAccessibility();
-  }, []);
+  }, [isReady, isAuthenticated, isGuest, hasCompletedOnboarding]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -98,8 +100,11 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="go-pro" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="accessibility-disclosure" options={{ presentation: 'modal', headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="delete-account" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
       <OfflineBanner />
+      <ConsentPrompt />
       <StatusBar style={isDark ? "light" : "dark"} />
     </GestureHandlerRootView>
   );
@@ -127,9 +132,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <TimeBankProvider>
-          <AppContent fontsLoaded={loaded} />
-        </TimeBankProvider>
+        <AnalyticsProvider>
+          <TimeBankProvider>
+            <AppContent fontsLoaded={loaded} />
+          </TimeBankProvider>
+        </AnalyticsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

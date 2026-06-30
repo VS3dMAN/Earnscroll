@@ -41,3 +41,12 @@ ios/
 .rork
 .env
 rork-eslint.config.js
+
+# Sentry (contains auth token for source-map upload)
+android/sentry.properties
+ios/sentry.properties
+sentry.properties
+
+# Build artifacts — never commit (GitHub rejects files > 100 MB)
+*.apk
+*.aab

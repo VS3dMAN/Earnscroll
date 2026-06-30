@@ -1,155 +1,184 @@
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Linking } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import { useTheme } from '@/contexts/Theme';
 import { typography } from '@/constants/typography';
+import { LAST_UPDATED_DATE, LEGAL_CONTACT, WEB_LEGAL_HOSTED, WEB_LEGAL_URLS } from '@/constants/legal';
 
 export default function TermsOfServiceScreen() {
+  const themeContext = useTheme();
+  const theme = themeContext?.theme ?? {
+    background: '#000000',
+    card: '#0F172A',
+    text: '#FFFFFF',
+    textSecondary: '#94A3B8',
+    border: '#334155',
+    primary: '#22D3EE',
+    isDark: true,
+  };
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <ArrowLeft size={24} color="#fff" />
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.background }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Terms of Service</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Terms of Service</Text>
         </View>
 
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.lastUpdated}>Last Updated: January 2025</Text>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>Last Updated: {LAST_UPDATED_DATE}</Text>
 
-          <Text style={styles.sectionTitle}>1. Acceptance of Terms</Text>
-          <Text style={styles.paragraph}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          </Text>
+          {!WEB_LEGAL_HOSTED && (
+            <View style={[styles.banner, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '55' }]}>
+              <Text style={[styles.bannerText, { color: theme.textSecondary }]}>
+                A web-hosted version of these Terms will be available at {WEB_LEGAL_URLS.terms} before production release.
+              </Text>
+            </View>
+          )}
 
-          <Text style={styles.sectionTitle}>2. Description of Service</Text>
-          <Text style={styles.paragraph}>
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-          </Text>
+          <H theme={theme}>1. Acceptance &amp; Eligibility</H>
+          <P theme={theme}>
+            By creating an account or using EarnScroll, you agree to these Terms. You must be at least 13 years old to use the App. If you are under the age of majority in your jurisdiction, you confirm you have a parent or guardian's consent.
+          </P>
 
-          <Text style={styles.sectionTitle}>3. User Responsibilities</Text>
-          <Text style={styles.paragraph}>
-            Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-          </Text>
+          <H theme={theme}>2. License</H>
+          <P theme={theme}>
+            We grant you a personal, non-exclusive, non-transferable, revocable license to use the App on devices you own or control. You may not sublicense, resell, or distribute the App.
+          </P>
 
-          <Text style={styles.sectionTitle}>4. Subscription and Payment</Text>
-          <Text style={styles.paragraph}>
-            Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-          </Text>
+          <H theme={theme}>3. Account Responsibilities</H>
+          <P theme={theme}>
+            You are responsible for keeping your account credentials secure and for activity that occurs under your account. Notify us at {LEGAL_CONTACT.support} if you suspect unauthorized access.
+          </P>
 
-          <Text style={styles.sectionTitle}>5. Refund Policy</Text>
-          <Text style={styles.paragraph}>
-            Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-          </Text>
+          <H theme={theme}>4. Acceptable Use</H>
+          <P theme={theme}>
+            You agree NOT to:
+          </P>
+          <P theme={theme}>
+            • Reverse engineer, decompile, or attempt to extract source code or model weights from the App, including the on-device pose-estimation model.{'\n'}
+            • Use the App Blocker to circumvent parental controls, workplace device-management policies, or any other security control.{'\n'}
+            • Use automation, scripts, or any non-physical input to fake exercise reps and earn time without performing the workout.{'\n'}
+            • Use the App for any unlawful purpose or to harass, harm, or impersonate any person.
+          </P>
 
-          <Text style={styles.sectionTitle}>6. Intellectual Property</Text>
-          <Text style={styles.paragraph}>
-            Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur.
-          </Text>
+          <H theme={theme}>5. Free Tier &amp; Future Pro Tier</H>
+          <P theme={theme}>
+            Version 1.0 of the App is offered free of charge with no in-app purchases. Future versions may introduce an optional "Pro" tier processed exclusively through Google Play Billing; pricing and terms specific to that tier will be presented in-app before any purchase.
+          </P>
 
-          <Text style={styles.sectionTitle}>7. Limitation of Liability</Text>
-          <Text style={styles.paragraph}>
-            Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur.
-          </Text>
+          <H theme={theme}>6. Health &amp; Fitness Disclaimer</H>
+          <P theme={theme}>
+            EarnScroll is a fitness and screen-time tool. It is NOT medical advice and does NOT diagnose, treat, or prevent any condition. Consult a physician before starting any new exercise program, especially if you have a medical condition. You exercise at your own risk.
+          </P>
 
-          <Text style={styles.sectionTitle}>8. Termination</Text>
-          <Text style={styles.paragraph}>
-            At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.
-          </Text>
+          <H theme={theme}>7. Limitation of Liability</H>
+          <P theme={theme}>
+            To the maximum extent permitted by law, EarnScroll and its operators are not liable for any indirect, incidental, consequential, or punitive damages, or for any loss of data, profits, or goodwill, arising out of or in connection with your use of the App. Our aggregate liability for any direct damages will not exceed INR 1,000.
+          </P>
 
-          <Text style={styles.sectionTitle}>9. Governing Law</Text>
-          <Text style={styles.paragraph}>
-            Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio.
-          </Text>
+          <H theme={theme}>8. Termination</H>
+          <P theme={theme}>
+            You may terminate your account at any time via Settings → Delete Account. We may suspend or terminate your access if you violate these Terms or applicable law. On termination, your data is deleted as described in our Privacy Policy.
+          </P>
 
-          <Text style={styles.sectionTitle}>10. Contact Information</Text>
-          <Text style={styles.paragraph}>
-            Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus.
-          </Text>
+          <H theme={theme}>9. Governing Law</H>
+          <P theme={theme}>
+            These Terms are governed by the laws of India, including the Indian Contract Act, 1872, and the Information Technology Act, 2000. Disputes will be subject to the exclusive jurisdiction of the courts in Bengaluru, Karnataka.
+          </P>
 
-          <View style={styles.divider} />
+          <H theme={theme}>10. Changes to These Terms</H>
+          <P theme={theme}>
+            We may update these Terms from time to time. The "Last Updated" date above always reflects the current version. For material changes we will surface an in-app notice on next launch. Continued use of the App after a change constitutes acceptance.
+          </P>
 
-          <Text style={styles.contactTitle}>Questions about our Terms?</Text>
-          <Text style={styles.contactText}>Email: legal@earnscroll.com</Text>
-          <Text style={styles.contactText}>Support: support@earnscroll.com</Text>
+          <H theme={theme}>11. Contact</H>
+          <P theme={theme}>
+            For any questions about these Terms, email <A theme={theme} email={LEGAL_CONTACT.legal}>{LEGAL_CONTACT.legal}</A>.
+          </P>
+
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <Text style={[styles.contactTitle, { color: theme.primary }]}>Questions about our Terms?</Text>
+          <Text style={[styles.contactText, { color: theme.textSecondary }]}>Email: {LEGAL_CONTACT.legal}</Text>
+          <Text style={[styles.contactText, { color: theme.textSecondary }]}>Support: {LEGAL_CONTACT.support}</Text>
         </ScrollView>
       </SafeAreaView>
     </>
   );
 }
 
+function H({ theme, children }: { theme: any; children: React.ReactNode }) {
+  return <Text style={[styles.sectionTitle, { color: theme.primary }]}>{children}</Text>;
+}
+
+function P({ theme, children }: { theme: any; children: React.ReactNode }) {
+  return <Text style={[styles.paragraph, { color: theme.textSecondary }]}>{children}</Text>;
+}
+
+function A({ theme, children, email }: { theme: any; children: React.ReactNode; email?: string; url?: string }) {
+  const onPress = () => {
+    if (email) Linking.openURL(`mailto:${email}`).catch(() => {});
+  };
+  return (
+    <Text style={{ color: theme.primary, textDecorationLine: 'underline' }} onPress={onPress}>
+      {children}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
-    backgroundColor: '#000000',
   },
-  backButton: {
-    marginRight: 16,
-    padding: 4,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: typography.fontFamily.uiBold,
-    color: '#fff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  backButton: { marginRight: 16, padding: 4 },
+  title: { fontSize: 24, fontFamily: typography.fontFamily.uiBold },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
   lastUpdated: {
     fontSize: 14,
     fontFamily: typography.fontFamily.ui,
-    color: '#94A3B8',
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  banner: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  bannerText: {
+    fontSize: 13,
+    fontFamily: typography.fontFamily.ui,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontSize: 18,
     fontFamily: typography.fontFamily.uiBold,
-    color: '#22D3EE',
     marginTop: 24,
     marginBottom: 12,
   },
   paragraph: {
     fontSize: 15,
     fontFamily: typography.fontFamily.ui,
-    color: '#94A3B8',
     lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#334155',
-    marginVertical: 32,
-  },
+  divider: { height: 1, marginVertical: 32 },
   contactTitle: {
     fontSize: 16,
     fontFamily: typography.fontFamily.uiBold,
-    color: '#22D3EE',
     marginBottom: 12,
   },
   contactText: {
     fontSize: 14,
     fontFamily: typography.fontFamily.ui,
-    color: '#94A3B8',
     marginBottom: 6,
   },
 });

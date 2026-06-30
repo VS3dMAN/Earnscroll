@@ -1,0 +1,456 @@
+================================================================================
+EARNSCROLL — PLAY STORE COMPLIANCE FIX PLAN (v1.0 submission prep)
+Plan date: 2026-05-21
+Target: everything fixable in-repo without you touching Play Console / Supabase
+        dashboard / bank accounts. Items requiring your external action are
+        called out as "USER ACTION REQUIRED" and excluded from execution.
+================================================================================
+
+--------------------------------------------------------------------------------
+CONTEXT
+--------------------------------------------------------------------------------
+The Play Store audit identified 24+ risk items across 5 tiers. The user has
+chosen the following strategy for v1.0:
+
+  - Path C for app blocking: KEEP AccessibilityService, build a compliant
+    prominent-disclosure UI, and submit the Accessibility API Declaration to
+    Google in parallel with the 14-day closed test.
+  - No production domain yet: legal text lives as in-app screens only for now;
+    a hosted URL will be added before production submission.
+  - FREE_LAUNCH_MODE = true for v1.0: Pro/billing screen is hidden, no prices
+    shown, billing wired in v1.1.
+  - Account deletion via Supabase Edge Function + in-app Settings button.
+  - India-only initial launch (matches existing INR pricing in code, easier to
+    find 12 testers).
+  - Sentry tightened: no auto-session-tracking, no default PII, release/dist
+    tags added, source-map upload documented.
+
+This plan covers ONLY the work executable inside the repo. Closed testing
+recruitment, Play Console form submissions, Supabase RLS verification in the
+dashboard, D-U-N-S / identity verification, and domain purchase are documented
+as separate USER ACTION items at the end.
+
+--------------------------------------------------------------------------------
+PHASE 0 — Pre-flight (read-only verification, before any edits)
+--------------------------------------------------------------------------------
+  0.1  Run `npx expo prebuild --clean` once to confirm the current native
+       output matches the committed android/ tree. If it diverges, capture
+       the diff and stop — we need to know which files are generated vs.
+       hand-edited before we start editing native source.
+  0.2  Run `npm run lint` and capture the current baseline (failures, if any).
+  0.3  Confirm package name `com.earnscroll.app` is still available on Play
+       Store by opening play.google.com/store/apps/details?id=com.earnscroll.app
+       — USER ACTION, but record the result in a comment in app.json.
+
+--------------------------------------------------------------------------------
+PHASE 1 — Legal screens: replace Lorem Ipsum with real content
+--------------------------------------------------------------------------------
+Files to edit:
+  - app/privacy-policy.tsx        (lines 28-66 are Lorem Ipsum)
+  - app/terms-of-service.tsx      (lines 28-76 are Lorem Ipsum)
+
+Approach:
+  1.1  Treat the existing /legal HTML files as the canonical source until they
+       are revamped in PHASE 9. For now, replace the Lorem Ipsum body of each
+       .tsx with placeholder TODO blocks that match the structure we will
+       fill in PHASE 9. This avoids shipping the obsolete HTML content into
+       the React Native screens and keeps a single source of truth.
+  1.2  Update "Last updated" string in both screens to a {LAST_UPDATED_DATE}
+       constant exported from a new file: constants/legal.ts.
+       This lets PHASE 9 update one constant instead of two screens.
+  1.3  Add a clearly visible banner at the top of each screen for v1.0 only:
+       "A web-hosted version of this policy will be available at
+       earnscroll.com/privacy before production release." — remove banner
+       once the URL is live (tracked in PHASE 9 revamp).
+  1.4  Both screens must remain scrollable, themed via useTheme(), and use
+       Inter font (matches rest of app).
+
+NOTE: actual replacement text is NOT written here. PHASE 9 produces the final
+text and back-fills both .tsx screens and the /legal HTML files from a single
+authoritative draft.
+
+--------------------------------------------------------------------------------
+PHASE 2 — Account deletion (Tier 1 #2)
+--------------------------------------------------------------------------------
+Files to create:
+  - supabase/functions/delete-account/index.ts
+  - app/delete-account.tsx                  (confirmation screen)
+
+Files to edit:
+  - app/settings.tsx                        (add Delete Account row above Sign Out)
+  - contexts/Auth.tsx                       (add deleteAccount() method)
+
+Edge Function behavior (delete-account):
+  - Verifies caller JWT, extracts user_id
+  - Runs in this order inside a transaction:
+      1. Insert audit row into a new `deletion_log` table (user_id, ts, reason)
+      2. DELETE FROM analytics_events WHERE user_id = $1
+      3. DELETE FROM analytics_consent WHERE user_id = $1
+      4. DELETE FROM user_sessions WHERE user_id = $1
+      5. DELETE FROM diagnostic_logs WHERE user_id = $1
+      6. (Add any other user-scoped tables — see PHASE 5.1 audit)
+      7. supabaseAdmin.auth.admin.deleteUser(user_id)
+  - Returns { ok: true, deletedAt } or structured error.
+  - Hard-deletes; no soft-delete grace period (simplest for first pass).
+
+In-app flow (app/delete-account.tsx):
+  - Reached from Settings → "Delete account"
+  - Shows: what will be deleted (Supabase data, analytics, sessions, local
+    encrypted prefs); what is retained (anonymized aggregated counts, deletion
+    audit row for 30 days per legal requirement); confirmation requires typing
+    the word DELETE into a TextInput before the destructive button enables.
+  - On success: clears AsyncStorage TimeBank keys, clears EncryptedSharedPrefs
+    via a new native bridge method `clearSecurePrefs()`, signs out, navigates
+    to /onboarding.
+
+USER ACTION REQUIRED (excluded from execution):
+  - Deploy the Edge Function with `supabase functions deploy delete-account`
+  - Create the `deletion_log` table via Supabase dashboard (SQL provided in
+    plan output for copy-paste)
+  - Set service-role key as Edge Function secret
+
+--------------------------------------------------------------------------------
+PHASE 3 — AccessibilityService disclosure UI (Tier 1 #3 mitigation, Path C)
+--------------------------------------------------------------------------------
+Files to create:
+  - app/accessibility-disclosure.tsx        (full-screen disclosure)
+
+Files to edit:
+  - app/_layout.tsx                         (lines 70-95: replace Alert with
+                                             navigation to new screen)
+  - plugins/withEarnScrollNative.js         (description string fix)
+  - DELETE plugins/withAppBlocker.js        (unused, removes a second
+                                             unregistered service definition)
+
+Disclosure screen requirements (matches Google's "prominent disclosure" spec):
+  - Full-screen, not dismissable by tap-outside
+  - Title: "App Blocking Permission"
+  - Sections (each visible without scrolling on a 6-inch device if possible):
+      1. What this feature does (1-2 sentences)
+      2. Why it needs Accessibility access (1 sentence — "to detect when a
+         blocked app is opened")
+      3. Data accessed: foreground app package name (READ only); never
+         transmitted off device; not stored beyond the current session in
+         memory
+      4. What is NOT accessed: screen content, text input, passwords, other
+         app data
+      5. You can revoke this anytime in Android Settings → Accessibility
+  - Mandatory checkbox: "I understand what data this service accesses"
+  - "Open Settings" button is disabled until checkbox is checked
+  - "Not now" button always enabled, returns user to previous screen with
+    app blocker disabled
+  - The screen is shown:
+      a. Once during onboarding (after exercise selection), and
+      b. From Settings if the user later wants to enable blocking
+  - User's affirmative consent (checkbox + Open Settings tap) is persisted to
+    AsyncStorage as a timestamped record `accessibility_consent_v1` (we may
+    need this for an audit response).
+
+withEarnScrollNative.js fixes:
+  - Add a real string resource for accessibility_service_description:
+      "EarnScroll observes which app is in the foreground to block distracting
+       apps you've selected when your earned-time bank is empty. It does not
+       read screen content, text input, or any other app data."
+  - Reference it as android:description="@string/accessibility_service_description"
+    in the generated XML (currently @string/app_name).
+  - Add android:summary same value (some Android versions show summary too).
+
+--------------------------------------------------------------------------------
+PHASE 4 — Permissions hygiene (Tier 2 #8 + Tier 1 #4 prep)
+--------------------------------------------------------------------------------
+Files to edit:
+  - plugins/withEarnScrollNative.js   (manifest manipulation)
+  - app.json                          (android.permissions explicit list)
+
+Changes:
+  4.1  Add manifest merger overrides to REMOVE the transitively-added
+       READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE permissions:
+         <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+             tools:node="remove" />
+         <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+             tools:node="remove" />
+       Done via the plugin's manifest mod, with `xmlns:tools` added if missing.
+
+  4.2  In app.json, set an explicit `android.permissions` list containing ONLY:
+         - CAMERA
+         - QUERY_ALL_PACKAGES
+         - SYSTEM_ALERT_WINDOW
+         - PACKAGE_USAGE_STATS
+         - INTERNET (auto)
+         - VIBRATE  (if currently used by haptics)
+       This prevents future transitive additions from silently appearing.
+
+  4.3  Prepare the Permission Declaration Form material as a markdown file
+       (legal/play-permission-declarations.md, generated in PHASE 9). It will
+       contain three pre-filled sections — QUERY_ALL_PACKAGES, SYSTEM_ALERT_WINDOW,
+       BIND_ACCESSIBILITY_SERVICE — with the exact words to paste into Play
+       Console plus a checklist of what the demo video must show.
+
+--------------------------------------------------------------------------------
+PHASE 5 — Backend posture (Tier 2 #6, #9)
+--------------------------------------------------------------------------------
+Files to create:
+  - supabase/migrations/2026XXXX_rls_audit.sql   (idempotent enable + policies)
+  - docs/supabase-rls-checklist.md               (USER VERIFICATION checklist)
+
+Changes:
+  5.1  Enumerate all Supabase tables the app currently writes to:
+       analytics_events, analytics_consent, user_sessions, diagnostic_logs,
+       (any others discovered via grep in PHASE 0). Also: tables created in
+       PHASE 2 (deletion_log).
+  5.2  Generate idempotent SQL that:
+         ALTER TABLE <name> ENABLE ROW LEVEL SECURITY;
+         DROP POLICY IF EXISTS "user owns rows" ON <name>;
+         CREATE POLICY "user owns rows" ON <name>
+           FOR ALL TO authenticated
+           USING (user_id = auth.uid())
+           WITH CHECK (user_id = auth.uid());
+       Anon role gets NO policies (deny by default).
+  5.3  Add a deletion_log policy that ONLY service_role can write (Edge
+       Function uses service role; users cannot insert audit rows).
+  5.4  Add docs/supabase-rls-checklist.md with copy-paste verification queries
+       and screenshots of what should be visible in Supabase dashboard.
+
+USER ACTION REQUIRED:
+  - Run the migration via Supabase dashboard SQL editor or `supabase db push`
+  - Walk the docs checklist to confirm every table reports rls_enabled=true
+
+--------------------------------------------------------------------------------
+PHASE 6 — Pro/billing lockdown (Tier 1 #5)
+--------------------------------------------------------------------------------
+Files to edit:
+  - app/(tabs)/index.tsx, app/onboarding.tsx, anywhere router.push('/go-pro')
+    appears: gate the navigation behind `!FREE_LAUNCH_MODE`
+  - app/go-pro.tsx: keep existing FREE_LAUNCH_MODE guard but ALSO add a
+    server-style 404 fallback (router.replace('/')) so a deep link cannot
+    surface the unlaunched screen
+  - services/billing.ts: tighten the stub so each function throws with the
+    string "billing_not_enabled" (lets us add error-monitoring assertion
+    that we never accidentally call it in production)
+  - constants/feature-flags.ts (new): export FREE_LAUNCH_MODE from a single
+    file, replacing the duplicate constant currently in contexts/TimeBank.tsx
+    line 22. Easier to flip later.
+
+Verification: grep the entire repo for references to "go-pro" and "₹" — both
+must be unreachable when FREE_LAUNCH_MODE is true.
+
+--------------------------------------------------------------------------------
+PHASE 7 — Sentry tightening (Tier 3 #14)
+--------------------------------------------------------------------------------
+Files to edit:
+  - services/sentry.ts
+  - app.json (sentry plugin config)
+  - .gitignore (add android/sentry.properties if not already ignored)
+
+Changes:
+  7.1  Init options updates:
+         enableAutoSessionTracking: false
+         sendDefaultPii: false
+         attachStacktrace: true
+         tracesSampleRate: 0.1            (was probably default 1.0 — too noisy)
+         profilesSampleRate: 0
+         beforeSend(event):
+           - Strip event.user.email if present
+           - Strip query strings from request URLs
+           - Drop the event entirely if user has not granted analytics consent
+             (defense in depth — Sentry init is already consent-gated, but
+              this catches edge cases like consent revoked mid-session)
+         release: `${pkg.name}@${pkg.version}+${Constants.expoConfig.runtimeVersion}`
+         dist:    Constants.expoConfig.android?.versionCode?.toString()
+
+  7.2  Document SENTRY_AUTH_TOKEN in plans/manual-setup-checklist.txt — must
+       be added to EAS secrets for source-map upload to work. USER ACTION.
+
+  7.3  Move android/sentry.properties to .gitignore (currently untracked but
+       worth pinning; the file contains an auth token if any).
+
+--------------------------------------------------------------------------------
+PHASE 8 — Camera pre-permission disclosure (Tier 2 #10) + onboarding fix (Tier 3 #15)
+--------------------------------------------------------------------------------
+Files to edit:
+  - components/NativeWorkoutCamera.tsx     (lines ~108-115)
+  - app/onboarding.tsx                     (line ~53 — "permanent choice" copy)
+
+Changes:
+  8.1  Before calling requestPermission(), show a small pre-permission card:
+       "EarnScroll uses your camera to count your reps in real time. Frames
+        are processed on-device only — nothing is uploaded, saved, or shared."
+       Two buttons: "Use camera" / "Not now". "Use camera" then triggers the
+       OS dialog. "Not now" returns to dashboard.
+
+  8.2  In onboarding, REMOVE the phrase "This choice is permanent and cannot
+       be changed later." Replace with "You can switch your free exercise
+       later from Settings." Then add the actual switcher in Settings
+       (small lift, but eliminates the deceptive-funnel risk reviewers flag).
+
+--------------------------------------------------------------------------------
+PHASE 9 — LEGAL FOLDER REVAMP (final step — execute LAST)
+--------------------------------------------------------------------------------
+This is the step the user explicitly asked to defer until everything else is
+fixed, because the legal text must reflect the FINAL state of the app, not
+the in-progress one. Execute only after PHASES 1-8 are merged and verified.
+
+Inputs to the revamp (drawn from the now-final app state):
+  - Permissions list (final, after PHASE 4): CAMERA, QUERY_ALL_PACKAGES,
+    SYSTEM_ALERT_WINDOW, PACKAGE_USAGE_STATS, BIND_ACCESSIBILITY_SERVICE,
+    INTERNET, VIBRATE
+  - Backend services in use: Supabase (auth, postgres, edge functions),
+    Sentry (consent-gated crash reports only)
+  - Data collected (final, post-PHASE 7): email, phone (if used), OAuth
+    sub IDs, analytics events (consent-gated), session records, diagnostic
+    logs, crash reports (consent-gated)
+  - Account deletion: in-app via Settings → Delete Account + future web URL
+  - Retention: 45 days for backups, immediate deletion of live data,
+    deletion_log retained 30 days for audit
+  - Children: 13+ only, no COPPA-protected data collection
+  - Region: India initial, subject to local data protection norms (DPDP Act)
+
+Files to fully rewrite (all three):
+  - legal/privacy-policy.html
+  - legal/terms-of-service.html
+  - legal/data-safety-form-guide.html
+
+Required sections in privacy-policy.html:
+   1. Who we are + contact (privacy@earnscroll.com)
+   2. Data we collect (categorized: account, app activity, performance,
+      camera-derived [on-device only], accessibility-derived [on-device only],
+      device identifiers)
+   3. How we use it
+   4. Legal basis (DPDP Act + GDPR-equivalent terms even if India-only —
+      future-proofs global rollout)
+   5. Third-party processors: Supabase, Sentry, Google Sign-In, Apple Sign-In
+      — name them explicitly with their privacy URLs
+   6. On-device processing statement (camera frames + foreground-app
+      observation never leave the device)
+   7. Data retention (live: immediate on deletion; backups: 45 days;
+      audit logs: 30 days)
+   8. User rights: access, correction, deletion, portability — including
+      the in-app Delete Account button + email path
+   9. Children's policy (13+ only, no targeted advertising to minors)
+  10. Security: TLS in transit, AES at rest (Supabase + EncryptedSharedPrefs)
+  11. International transfers (Supabase region disclosure)
+  12. Changes to this policy + notification mechanism
+  13. Effective date (constants/legal.ts LAST_UPDATED_DATE)
+
+Required sections in terms-of-service.html:
+   1. Acceptance + eligibility (13+)
+   2. License grant (personal, non-exclusive, non-transferable)
+   3. Account responsibilities
+   4. Acceptable use (no reverse engineering of the on-device ML model,
+      no using app blocking to circumvent parental controls or workplace
+      restrictions, no automated rep faking)
+   5. Free vs Pro tier (v1.0: free-only statement; reference future Pro tier
+      controlled by Google Play Billing)
+   6. Disclaimers: fitness app, not medical advice, consult physician
+   7. Limitation of liability
+   8. Termination
+   9. Governing law (India — Indian Contract Act 1872 + relevant IT Act)
+  10. Changes to terms
+  11. Contact (legal@earnscroll.com)
+  12. Effective date
+
+Required sections in data-safety-form-guide.html:
+   This file becomes a step-by-step Play Console form filler. It must list:
+   - Every Data Safety category (Personal info, Financial info, Health and
+     fitness, Messages, Photos and videos, Audio files, Files and docs,
+     Calendar, Contacts, App activity, Web browsing, App info and performance,
+     Device or other IDs)
+   - For each category, the exact answer EarnScroll should give: Collected
+     yes/no, Shared yes/no, Required vs Optional, Why collected, Encrypted
+     in transit (yes for all), Can be deleted (yes for all via Delete Account)
+   - Specific reviewer-trap callouts:
+       * Camera: "used in app, not collected" with on-device-only explanation
+       * Health & Fitness data: "Collected (workout counts), Not Shared,
+         Optional, App functionality, encrypted in transit, can be deleted"
+       * Installed apps (QUERY_ALL_PACKAGES): "Collected (app blocker list
+         selection only), Not Shared, Optional, App functionality"
+   - Two final checklists: (a) what to upload to Play Console verbatim,
+     (b) what to keep in sync between Privacy Policy and Data Safety form
+     so they never diverge.
+
+Cross-cutting consistency rules (must hold across all three files):
+  - All three files use the same constants/legal.ts LAST_UPDATED_DATE
+  - All three name the same processors (Supabase, Sentry, Google, Apple)
+  - All three reflect ONLY what the final app state does — if PHASE 6 hides
+    Pro, the Terms should describe v1.0 as free-only with future-Pro language
+  - The data inventory in the Privacy Policy MUST exactly match the
+    declarations in the Data Safety guide — write the inventory once and
+    reference it from both
+
+After /legal files are rewritten:
+  - Update app/privacy-policy.tsx and app/terms-of-service.tsx with text
+    derived from the same source draft (matched section-for-section, RN
+    formatting instead of HTML)
+  - Update constants/legal.ts LAST_UPDATED_DATE
+  - Update plans/manual-setup-checklist.txt to note that the hosted URL
+    versions still need to be deployed before Play Console submission
+
+--------------------------------------------------------------------------------
+VERIFICATION (run after each phase, full pass before considering done)
+--------------------------------------------------------------------------------
+  V.1  `npm run lint` — must pass clean
+  V.2  `npx tsc --noEmit` — must pass clean
+  V.3  Manual app run via `npm run start` + Expo Go (Android):
+         - Sign up new account → see new consent prompt → grant analytics
+         - Complete onboarding → verify no "permanent choice" copy
+         - Open Workout tab → see camera pre-permission card → grant camera
+         - Settings → tap Delete Account → confirm flow works (test with a
+           throwaway account)
+         - Settings → trigger accessibility prompt → see new full-screen
+           disclosure, NOT the old Alert
+         - go-pro deep link (`exp://.../go-pro`) → should redirect to home
+  V.4  `npx expo prebuild --clean` → grep generated AndroidManifest.xml:
+         - READ_EXTERNAL_STORAGE absent
+         - WRITE_EXTERNAL_STORAGE absent
+         - accessibility_service_description string defined and referenced
+  V.5  Build a release AAB via `eas build --profile production --platform android`
+       then run `apkanalyzer -h` checks for 16 KB page alignment on the .so
+       files (USER ACTION — needs EAS account configured)
+  V.6  Run pre-launch test on a Pixel emulator with the Robo script: should
+       reach Dashboard without crashing, even without the camera.
+
+--------------------------------------------------------------------------------
+ITEMS EXCLUDED FROM THIS PLAN (USER ACTION REQUIRED, in roughly this order)
+--------------------------------------------------------------------------------
+  X.1  Buy/configure earnscroll.com domain; host /legal HTML at /privacy,
+       /terms, /data-safety; deploy a basic /delete-account web page that
+       describes the email-based deletion path for users who can't access
+       the app.
+  X.2  Deploy Supabase Edge Function delete-account; create deletion_log
+       table; verify RLS migration applied; verify every table reports
+       rls_enabled=true in dashboard.
+  X.3  Configure SENTRY_AUTH_TOKEN in EAS secrets for source-map upload.
+  X.4  Create Play Console developer account (₹2,100 fee + identity
+       verification — 24-48 hours).
+  X.5  Recruit 12 testers (real Gmail accounts, India-region), add to a
+       Google Group, invite the group to a Closed Test track. Closed test
+       must run continuously for 14 days BEFORE production review.
+  X.6  Record permission declaration videos (one each for: AccessibilityService
+       in use, QUERY_ALL_PACKAGES being used to populate the blocker list,
+       SYSTEM_ALERT_WINDOW if still kept after PHASE 4 review). Submit each
+       declaration form in Play Console using the text from
+       legal/play-permission-declarations.md.
+  X.7  Fill Data Safety form using legal/data-safety-form-guide.html.
+  X.8  Fill Content Rating questionnaire (expect Everyone or Everyone 10+).
+  X.9  Verify com.earnscroll.app package name is still unclaimed; lock it
+       on first upload.
+  X.10 Configure pre-launch report with a throwaway test account credential
+       so Robo can sign in.
+
+--------------------------------------------------------------------------------
+EXECUTION ORDER SUMMARY (when you say "go")
+--------------------------------------------------------------------------------
+  Step 1: PHASE 0   (verification only, no edits)
+  Step 2: PHASE 6   (Pro lockdown — tiny, derisks all later UI work)
+  Step 3: PHASE 4   (permissions hygiene — manifest changes ripple through builds)
+  Step 4: PHASE 3   (accessibility disclosure screen + plugin cleanup)
+  Step 5: PHASE 8   (camera pre-prompt + onboarding copy)
+  Step 6: PHASE 7   (Sentry tightening)
+  Step 7: PHASE 2   (account deletion — in-app side; Edge Function deploy is
+                     user action)
+  Step 8: PHASE 5   (RLS migration file + checklist doc)
+  Step 9: PHASE 1   (legal screens skeleton — paired with PHASE 9 drafts)
+  Step 10: PHASE 9  (LEGAL FOLDER REVAMP — last, draws on final app state)
+  Step 11: VERIFY   (V.1 - V.6)
+
+End of plan.

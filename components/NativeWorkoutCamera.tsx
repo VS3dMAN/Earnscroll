@@ -6,6 +6,7 @@ import { useTensorflowModel } from 'react-native-fast-tflite';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
 import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import { useTimeBank } from '@/contexts/TimeBank';
+import { useAnalytics } from '@/contexts/Analytics';
 import { Flame, Zap, Timer, Play, StopCircle, Lock, SwitchCamera, Crown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -54,7 +55,9 @@ export default function NativeWorkoutCamera() {
     const [cameraFacing, setCameraFacing] = useState<'front' | 'back'>('front');
     const device = useCameraDevice(cameraFacing);
     const { addMinutes, isUserPro, userFreeExercise, earningRatios, addExerciseToHistory } = useTimeBank();
+    const { trackEvent, log } = useAnalytics();
     const router = useRouter();
+    const workoutStartTime = useRef<number>(0);
 
     // Only run the camera when the Workout tab is focused AND the app is in the foreground.
     const isFocused = useIsFocused();
@@ -96,6 +99,7 @@ export default function NativeWorkoutCamera() {
             setModelStatus('Loading AI model...');
         } else if (plugin.state === 'error') {
             setModelStatus('Failed to load AI model');
+            log('error', 'tflite_model_load_failed', { camera_facing: cameraFacing });
         } else if (plugin.state === 'loaded' && plugin.model) {
             setModelStatus('');
             console.log('✓ TFLite model loaded successfully');
@@ -104,9 +108,10 @@ export default function NativeWorkoutCamera() {
         }
     }, [plugin.state, plugin.model]);
 
-    useEffect(() => {
-        if (!hasPermission) requestPermission();
-    }, [hasPermission]);
+    // We deliberately do NOT auto-request the camera permission on mount.
+    // Google's Privacy & Data policy expects a pre-permission disclosure
+    // before the OS dialog is shown. Permission is requested only when the
+    // user taps "Use camera" on the pre-permission card below.
 
     // Track count with ref for speech announcements
     const countRef = useRef(0);
@@ -144,6 +149,12 @@ export default function NativeWorkoutCamera() {
     // --- LOGIC: Finish Workout ---
     const finishWorkout = () => {
         setIsRecording(false);
+        const durationSeconds = Math.round((Date.now() - workoutStartTime.current) / 1000);
+        trackEvent('workout_completed', {
+            exercise: selectedExercise,
+            rep_count: count,
+            duration_seconds: durationSeconds,
+        });
 
         // Calculate Plank Earnings at end (based on total seconds held)
         if (selectedExercise === 'planks' && count > 0) {
@@ -339,10 +350,28 @@ export default function NativeWorkoutCamera() {
     if (!hasPermission) {
         return (
             <View style={styles.container}>
-                <Text style={styles.text}>Camera permission required</Text>
-                <TouchableOpacity style={styles.permButton} onPress={requestPermission}>
-                    <Text style={styles.permButtonText}>Grant Permission</Text>
-                </TouchableOpacity>
+                <View style={styles.prePermCard}>
+                    <Text style={styles.prePermTitle}>Use camera to count reps</Text>
+                    <Text style={styles.prePermBody}>
+                        EarnScroll uses your camera to count your reps in real time. Frames are processed on-device only — nothing is uploaded, saved, or shared.
+                    </Text>
+                    <View style={styles.prePermActions}>
+                        <TouchableOpacity
+                            style={styles.prePermSecondary}
+                            onPress={() => router.replace('/(tabs)')}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.prePermSecondaryText}>Not now</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.permButton}
+                            onPress={requestPermission}
+                            activeOpacity={0.85}
+                        >
+                            <Text style={styles.permButtonText}>Use camera</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
         );
     }
@@ -442,6 +471,8 @@ export default function NativeWorkoutCamera() {
                                 currentPhase.value = 'idle';
                                 pendingPhase.value = '';
                                 pendingFrames.value = 0;
+                                workoutStartTime.current = Date.now();
+                                trackEvent('workout_started', { exercise: selectedExercise });
                                 setIsRecording(true);
                                 setShowSelector(false);
                                 setFeedback("GO!");
@@ -461,8 +492,14 @@ export default function NativeWorkoutCamera() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#000' },
     text: { color: 'white', textAlign: 'center', marginTop: 100, fontSize: 16 },
-    permButton: { marginTop: 20, alignSelf: 'center', backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+    permButton: { backgroundColor: '#22C55E', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, flex: 1.2, alignItems: 'center' },
     permButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    prePermCard: { marginTop: 80, marginHorizontal: 20, padding: 24, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+    prePermTitle: { color: '#fff', fontSize: 20, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
+    prePermBody: { color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 24 },
+    prePermActions: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
+    prePermSecondary: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center' },
+    prePermSecondaryText: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
     overlay: { flex: 1, paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20 },
     modelStatusContainer: { alignItems: 'center', marginTop: 20, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, alignSelf: 'center' },
     modelStatusText: { color: '#FF9800', fontSize: 14, fontWeight: 'bold' },

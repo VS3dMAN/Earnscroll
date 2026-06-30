@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { StyleSheet, View, Text, Platform, ActivityIndicator } from 'react-native';
 import Constants from 'expo-constants';
 import { useTimeBank } from '@/contexts/TimeBank';
+import { useAnalytics } from '@/contexts/Analytics';
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -25,6 +26,11 @@ function ExpoGoFallback() {
 
 export default function WorkoutScreen() {
     const { isUserPro } = useTimeBank();
+    const { trackScreenView } = useAnalytics();
+
+    React.useEffect(() => {
+        trackScreenView('workout');
+    }, []);
 
     if (isExpoGo || !NativeWorkoutCamera) {
         return (

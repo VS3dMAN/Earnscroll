@@ -3,4 +3,5 @@
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
   <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
   <string name="expo_system_ui_user_interface_style" translatable="false">automatic</string>
+  <string name="accessibility_service_description" translatable="false">EarnScroll observes which app is in the foreground to block distracting apps you've selected when your earned-time bank is empty. It does not read screen content, text input, or any other app data.</string>
 </resources>

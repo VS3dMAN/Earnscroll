@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "EarnScroll needs camera access to track your exercises in real-time",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera to track your workouts.",
         "NSMotionUsageDescription": "EarnScroll uses motion data to enhance exercise tracking accuracy"
       }
     },
@@ -32,10 +32,16 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.earnscroll.app",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "permissions": [
-        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
         "android.permission.VIBRATE",
         "android.permission.QUERY_ALL_PACKAGES",
+        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.PACKAGE_USAGE_STATS"
       ]
     },
@@ -69,7 +75,21 @@
       "expo-font",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-apple-authentication"
-    ]
+      "expo-apple-authentication",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "vs3dman",
+          "project": "earnscroll"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d8058e8d-d464-4ed0-9642-d6e76a6fe469"
+      }
+    },
+    "owner": "vs3dman"
   }
 }

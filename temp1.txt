@@ -1,0 +1,234 @@
+I'll take on this comprehensive task. Given the scope—extensive web research on Play Store policies plus a full project scan—I need to load some additional tools first, then run research and code analysis in parallel.Used 14 tools, ran 4 agents, loaded toolsUsed 14 tools, ran 4 agents, loaded toolsThe research agents have returned rich findings. Now I need to do my own thorough scan of the actual project files. Let me launch one more research agent for content rating/listing while I read the project files in parallel.Read 3 files, ran an agent, used a toolRead 3 files, ran an agent, used a toolMajor findings already — the actual project is significantly different from what CLAUDE.md describes (Expo SDK 54, not 52; Supabase backend; Sentry; Apple Sign-In). Let me read more critical files in parallel.Read 12 files, searched 10 patterns, used 6 toolsRead 12 files, searched 10 patterns, used 6 toolsThe Privacy Policy and Terms of Service are LITERALLY LOREM IPSUM placeholder text — that's a major finding. Let me continue scanning the most critical files.Read 12 files, searched 3 patterns, used 2 toolsRead 12 files, searched 3 patterns, used 2 toolsI've finished the research and the project scan. No files have been modified — read-only throughout. Here's the comprehensive vulnerability report.
+
+EarnScroll — Google Play Store Submission Risk Audit
+Audit date: May 2, 2026 · Reviewed against: Play Console policies in force May 2026, Android 15/16 APIs, Expo SDK 54
+Quick orientation: what your project actually is
+Before getting into risks, two things in CLAUDE.md and ROADMAP.md are stale and worth noting because they affected my analysis:
+
+You're on Expo SDK 54 (expo@^54.0.33, RN 0.81.5), not SDK 52. CLAUDE.md and the audit in ROADMAP.md predate the upgrade. SDK 54 defaults to targetSdkVersion 35 and minSdkVersion 24, which is exactly what Play Store currently requires for new apps.
+You DO have a backend. @supabase/supabase-js, full auth (email, Google OAuth, Apple Sign-In, phone OTP, guest mode), Sentry diagnostics, server-side analytics events, sessions, diagnostic logs, and consent records all hit Supabase tables. That changes the data-safety story significantly compared with what the older docs say.
+Only ONE accessibility service is wired up. plugins/withAppBlocker.js exists but is NOT registered in app.json's plugins array. Only withEarnScrollNative.js is active, registering com.earnscroll.BlockerService. Good — but if you ever add the other plugin, you'll have two services in one APK and that's a major red flag (see below).
+
+Package: com.earnscroll.app (matches both Android package and iOS bundleIdentifier). App name: "EarnScroll: Screen-Time Gym". Slug: earnscroll-screen-time-gym.
+
+The picture in one sentence
+If you submit today, you will be rejected, and depending on the reviewer it could escalate from a "fix this and resubmit" to a developer-account warning. The combination of (a) AccessibilityService used to autonomously kill apps, (b) literal Lorem Ipsum legal pages, (c) a Supabase backend with no in-app account deletion, and (d) three high-risk permissions with no Permission Declaration Forms prepared is roughly the worst-case mix Play Console looks for.
+The good news: nothing here is unfixable. The architecture is sound, the secure storage and consent handling are well done, and your FREE_LAUNCH_MODE switch is actually the cleanest way to ship a v1.0 without billing. Below is everything ranked by what will actually get you rejected.
+
+TIER 1 — SHOWSTOPPERS (will be rejected in first review with near certainty)
+1. Privacy Policy is literal Lorem Ipsum
+app/privacy-policy.tsx lines 28–66 contain placeholder Latin text. The Terms of Service file is the same — app/terms-of-service.tsx lines 28–76 are also Lorem Ipsum. Last-updated date hardcoded to "January 2025."
+Why this is fatal: Play Console requires the Privacy Policy URL field to point at a "publicly accessible" page that "comprehensively discloses" data practices. Reviewers manually open the URL during review. They will see Latin filler text. This is the #1 most common rejection cause cited across community sources.
+Compounding issue: the Privacy Policy is only a screen inside the app. Play Console does not accept an in-app screen — it requires a hosted URL on a domain you control (e.g., earnscroll.com/privacy), reachable without sign-in. You'll need to host one in addition to (or instead of) the in-app screen. The contact emails in the file (privacy@earnscroll.com, support@earnscroll.com, legal@earnscroll.com) also need to actually receive mail.
+What it must cover for your app specifically:
+
+Camera frames processed on-device via TFLite, not stored, not transmitted
+Accessibility service: which app launches it observes, what it does with that information, whether it's stored
+Supabase data: email, phone, OAuth identifiers (Google/Apple sub), session JWTs, plus the analytics tables (analytics_events, analytics_consent, user_sessions, diagnostic_logs)
+Sentry crash reports (DSN o4511276915621888.ingest.de.sentry.io)
+Locally encrypted data (EncryptedSharedPreferences EarnScrollSecurePrefs — minutes balance, blocked-package list)
+Subscription billing (when activated)
+Children's data / COPPA stance
+Account deletion process and 45-day data retention
+
+2. No in-app account deletion mechanism
+app/settings.tsx lines 232–259 only have a "Sign Out" button. Sign-out clears the Supabase session — it does not delete the user from auth.users or any of your custom tables.
+Why this is fatal: Google's Account Deletion policy (in force since May 2024, expanded April 2026) requires apps that allow account creation to provide:
+
+An in-app path to delete the account and the associated data
+An externally accessible path (web URL) for users who can't access the app
+Completion within 45 days, with a clear explanation of what is/isn't deleted
+
+You have full sign-up flows (email, Google, Apple, phone OTP) writing to Supabase — that's "account creation." Without delete, you will fail this gate. This is checked in the Play Console "App Content" wizard and is also a manual review item.
+3. AccessibilityService used to autonomously block apps — current implementation
+android/app/src/main/java/com/earnscroll/BlockerService.kt listens for TYPE_WINDOW_STATE_CHANGED, checks the foreground package against a stored blocked-list, and on time-bank exhaustion launches BlockedActivity (full-screen, NoTitleBar.Fullscreen, excludeFromRecents, blocks back button → returns user to home).
+Why this is fatal: Google's October 2025 AccessibilityService policy update (enforced January 28, 2026) explicitly prohibits "any use of the Accessibility API that enables an app to autonomously initiate, plan, and execute actions or decisions." Killing apps on a configured rule is exactly that. Reference: Use of Accessibility API and the Oct 2025 enforcement notice.
+Critically, the eligible categories for AccessibilityService Google publishes do NOT include "screen time / app blocker / digital wellbeing." They list only true accessibility tools (screen readers, switch access, etc.). Apps in your category that have shipped with this approach (StayFree, AppBlock, Stay Focused) were grandfathered in and are now under tightening enforcement. New submissions in this category face very high rejection rates.
+Compounding issue: your accessibility_service_config.xml declares android:description="@string/app_name" — i.e. the description shown on Android's accessibility settings page is just the literal string "EarnScroll: Screen-Time Gym" with no explanation of what the service does or what data it accesses. Play Console reviewers consistently flag this as insufficient disclosure.
+Compounding issue 2: the in-app prompt asking the user to enable accessibility (app/_layout.tsx lines 70–95) is a simple Alert.alert("Enable App Blocker", "EarnScroll needs accessibility access to block distracting apps when your time runs out...") with "Later" / "Open Settings" buttons. Google requires a "prominent disclosure" before requesting accessibility — a dismissable alert is not sufficient. Required: a dedicated full-screen explanation that lists the data accessed and use, with explicit affirmative consent (e.g., a checkbox the user must tick before the "Continue" button enables).
+What you actually have to do (pick one):
+
+Option A — Pivot off AccessibilityService entirely. Use UsageStatsManager (you already have PACKAGE_USAGE_STATS declared) plus a foreground service of type dataSync or specialUse to poll the foreground app every ~1–2 seconds. When a blocked app is detected, fire a high-priority notification asking the user to switch away — do not autonomously kill the app. This is how ScreenZen ships on the Play Store. Less effective UX-wise, but compliant.
+Option B — Submit the AccessibilityService Permission Declaration Form anyway, attach a video showing the feature, write a justification framing it as a digital-wellbeing tool, and accept that approval is uncertain and may take 1–3 weeks of back-and-forth. Even if approved, the disclosure UI must be rebuilt.
+Option C — Distribute the autonomous-blocking version off-Play (F-Droid, sideload, your own site) and ship a Play Store version that monitors-and-nudges without blocking. Your FREE_LAUNCH_MODE flag suggests you already think in terms of two builds, so this is structurally easy.
+
+4. Three high-risk permissions with no Permission Declaration Forms prepared
+Your AndroidManifest.xml declares:
+PermissionStatusWhat's requiredQUERY_ALL_PACKAGESHigh-risk, gatedPermission Declaration Form + video demo + written justification of why it's a "core feature." App-blockers are explicitly listed as ineligible in Google's policy. Likely rejection.SYSTEM_ALERT_WINDOWHigh-risk, restrictedPermission Declaration Form + video demo. Heavily abused by malware → reviewers scrutinize hard.PACKAGE_USAGE_STATSSpecial permissionNot directly gated through a form, but use must be justified in Data Safety + Privacy Policy. Granted by user via Settings.BIND_ACCESSIBILITY_SERVICESpecial permissionTriggers the full AccessibilityService review (Tier 1 #3).
+You have not prepared any Permission Declaration Form material (video + written justification). Each takes 30–60 minutes to record/write and 1–2 weeks for Google to review. Without them, the upload will get an automated "this release uses [X] which hasn't been declared in Play Console" error.
+5. Billing UI exists but Play Billing is not wired up
+app/go-pro.tsx shows three subscription products with Indian pricing (₹99/month → ₹199 recurring, ₹1,299/year, ₹3,499 lifetime). It calls purchaseProduct() from services/billing.ts. That file is a stub: every function throws "Google Play Billing is not integrated yet.". Currently FREE_LAUNCH_MODE = true in contexts/TimeBank.tsx line 22 short-circuits the whole screen via router.back(), hiding the issue.
+Why this matters for compliance: as long as FREE_LAUNCH_MODE = true, this is not a Tier 1 issue — the Pro screen is unreachable, no prices are shown to real users, and there's no purchase attempt. Ship v1.0 with FREE_LAUNCH_MODE = true and the billing problem disappears for the initial submission.
+If you flip FREE_LAUNCH_MODE = false without integrating react-native-iap against Play Console-configured products, you will be auto-rejected: showing prices for a "Pro" tier that can't actually be purchased is a deceptive-behavior violation. Also note your disclaimer text ("Subscriptions are processed and managed via Google Play.") is a pre-emptive truthful claim that becomes false the moment a user taps a plan and it throws.
+When you do enable billing, you'll need:
+
+react-native-iap integration
+Three products configured in Play Console matching pro_monthly, pro_annual, pro_lifetime
+Server-side receipt verification (your Supabase backend can host this as an Edge Function)
+"Restore Purchases" button (mandatory for subscription apps)
+Subscription disclosures on the purchase screen: exact recurring price, billing period, auto-renew terms, cancellation instructions
+
+
+TIER 2 — HIGH RISK (likely rejection without fix, or extended manual review)
+6. Data Safety form will be your hardest declaration
+You collect significantly more than the in-context CLAUDE.md suggests:
+
+Personal info: email, phone (auth.users), OAuth identifiers from Google/Apple
+App activity: analytics_events (event names, properties, screen views), user_sessions (start/end/duration), workout completion events
+App performance: diagnostic_logs (level, message, context), Sentry crash data
+User-generated content: none stored remotely (workout history is local AsyncStorage)
+Device/other identifiers: Sentry sends device fingerprints by default; Supabase auth issues device-bound refresh tokens
+
+Required declarations on the Data Safety form:
+
+Camera (used in app, not collected because frames never leave the device — explicitly disclose this exemption)
+Accessibility data (the blocked-package list, foreground-app observations — declared as collected and processed locally)
+App activity, performance data → linked to user
+All marked "encrypted in transit" (HTTPS) and "encrypted at rest" (Supabase + your EncryptedSharedPreferences)
+Data deletion: must answer "Yes — users can request deletion in app and via web URL"
+
+Common rejection: Data Safety declarations not aligned with the manifest permissions or what your Privacy Policy says. Reviewers cross-check all three. If the manifest has CAMERA but the form says "no camera data collected" without an explanation that processing is on-device only, it gets flagged. The fix is to write the Privacy Policy first, fill the Data Safety form to match, and check that every permission in the manifest has a corresponding "why" you can articulate.
+7. AccessibilityService description string is wrong
+accessibility_service_config.xml has android:description="@string/app_name". The string accessibility_service_description defined in plugins/withAppBlocker.js line 99 ("EarnScroll uses this service to block distracting apps while you workout.") is not used because that plugin is not registered. The active config points at the plain app name.
+This is what Android shows users on the system-level Accessibility Settings page when they're considering enabling your service. Reviewers explicitly check this string. They want a sentence describing what the service does and what data it observes. Even if you keep the service, change withEarnScrollNative.js to write a real description string and reference it.
+8. Deprecated storage permissions present in the merged manifest
+The generated AndroidManifest.xml (lines 6 and 9) has READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE. These are not in your app.json permissions list — they're being added by a transitive library (likely expo-asset / expo-image ancestor or react-native-fast-tflite). On API 33+ these are no-ops, but they're flagged in Play Console's "this app requests permissions that no longer apply" warning, and reviewers sometimes ask for justification or want them removed via <uses-permission tools:node="remove" /> in a manifest override.
+9. Supabase URL and anon key are hardcoded — this is fine, but verify your Supabase project is locked down
+utils/supabase.ts lines 7–8 embed https://zurahjqghjratswjjpsg.supabase.co and the anon JWT. The comment correctly notes these are public keys safe to embed. However, an anon key only restricts access if your Row Level Security (RLS) policies are correctly written on every table:
+
+analytics_consent, analytics_events, user_sessions, diagnostic_logs — every row should be readable/writable only by auth.uid() = user_id
+If RLS is missing or permissive, anyone with the anon key (i.e. anyone who decompiles your APK) can read all users' analytics data. That's a privacy incident, a Data Safety form misalignment, and potentially a Play Store policy violation if it surfaces.
+
+Verify before submission: Open Supabase → Authentication → Policies and confirm every table you read/write has RLS enabled with user-scoped policies. I cannot read your Supabase project from here without a connector — you should do this manually in the dashboard.
+10. Camera disclosure language is thin
+Your iOS NSCameraUsageDescription ("EarnScroll needs camera access to track your exercises in real-time") is fine for Apple but Google reviewers want a similar in-app pre-permission disclosure on Android, ideally before requestPermission() is called. Currently components/NativeWorkoutCamera.tsx line 112 calls requestPermission() immediately when hasPermission is false, with the system dialog as the only context. Best practice and what reviewers want: a pre-prompt screen explaining (a) why you need the camera, (b) that frames are processed on-device only and never uploaded, (c) that no video or photos are saved.
+11. App will use the camera but pre-launch report robot can't do squats
+Google's pre-launch report runs your APK through Robo on a fleet of real devices. The robot will tap through the UI, hit the Workout tab, possibly grant the camera permission, and then not be able to perform exercises. This shouldn't crash anything (your code handles "no poses detected" gracefully), but the report will flag the workout as "couldn't reach core feature." This is usually a warning, not a rejection — but if it's combined with other issues, reviewers escalate. Add internal-app-sharing test instructions and a video walkthrough when you submit.
+
+TIER 3 — MEDIUM RISK (will not auto-reject, but slow review or trigger manual review)
+12. 16 KB page size compatibility
+Required for new submissions targeting Android 15+ as of November 1, 2025 (with extension to May 31, 2026). Three of your native libs are historically problematic:
+
+react-native-vision-camera@^4.7.3 — has open issues for 16 KB alignment in libVisionCamera.so
+react-native-fast-tflite@1.6.1 — TFLite native bindings need rebuild
+react-native-reanimated@~4.1.1 — version 4.x has 16 KB support; 3.x did not
+
+Action: Build your AAB and run apkanalyzer or zipalign -P 16 -v -c 4 app-release.aab to verify alignment. If any .so shows PAGE_ALIGNMENT_4K, you need to update the offending library or wait for a fix. Submitting a non-compliant build in May 2026 will produce a Play Console warning; after May 31, 2026 it can become a hard block.
+13. New Architecture is currently OFF — that's fine
+MainApplication.kt line 37 reads BuildConfig.IS_NEW_ARCHITECTURE_ENABLED, which is governed by Expo's default. Your app.json doesn't explicitly set newArchEnabled, so it inherits the SDK 54 default (which is now "on" by default but can be off depending on your prebuild). Worth confirming with npx expo prebuild --clean and grepping the generated gradle.properties for newArchEnabled=true|false. Either choice is policy-compliant — just verify your camera + reanimated combo actually works on whichever you ship.
+14. Sentry is enabled in release builds (enabled: !__DEV__) and grabs a session sample by default
+services/sentry.ts line 22 says enabled: !__DEV__, so it only initializes when consent is granted (your gating is correct), but enableAutoSessionTracking: true means session events fire automatically. You're already disclosing this via the ConsentPrompt modal which is good. Mention "Sentry" by name in the Privacy Policy ("third-party services we use: Sentry, for crash diagnostics — only enabled with your consent").
+15. Onboarding flow has a "permanent choice" UX
+app/onboarding.tsx line 53 forces the user to commit to one of squats/pushups/planks as their "free exercise" with no way to change. This isn't a policy violation, but reviewers look at first-run UX critically and the modal text "This choice is permanent and cannot be changed later" combined with no "Skip" option is the kind of thing that gets flagged as a deceptive funnel toward Pro. Currently FREE_LAUNCH_MODE skips this screen entirely (line 21–28 auto-completes onboarding), which is fine. If you re-enable later, consider adding a "Change later in Settings" path even if it costs you a Pro upsell.
+16. App targets minSdkVersion 24 — fine, but you'll lose ~3% of Android install base
+SDK 54 default. Consider whether dropping further to API 26 (Android 8) makes sense for compatibility ROI vs maintenance burden. No policy issue either way.
+17. Content rating questionnaire — fitness apps with monetary subscriptions
+Most answers will be straightforward "No" (no violence, no drugs, no gambling). Two answers worth thinking about:
+
+"Does your app contain user-generated content or social features?" → No (you have no comments, no profiles visible to other users)
+"Does your app share user-provided data with third parties?" → Technically Sentry receives crash data (with consent), Supabase processes data on your behalf. The right answer is "No" because Sentry/Supabase are processors, not third-party recipients in the IARC sense. But document this reasoning in case you get audited.
+
+18. Store listing — pricing in INR signals India region
+Your billing prices are in ₹ (Indian Rupees). If you launch globally on day 1, Play Console will localize prices but reviewers will check that you're not making region-specific claims that don't apply elsewhere. Lower risk: launch in India only initially, expand later. This also dovetails with the 12-tester closed testing requirement (easier to get 12 testers in your home market).
+
+TIER 4 — PROCESS & ACCOUNT-LEVEL ITEMS (won't reject, but they will block the path to launch)
+19. New personal Play Console accounts: 12 testers × 14 days
+If your developer account was created after November 13, 2023, you cannot publish to production until you've run a closed-testing track with 12 opted-in testers continuously for 14 consecutive days. (Reduced from 20 in December 2024.) This is enforced regardless of how good your APK is.
+Practical impact: even if everything else is perfect, you cannot go live for at least two weeks from the moment you start a closed test. Plan for this explicitly. Recruit 12 real Gmail accounts (friends, family, an r/androiddev "Looking for testers" post) and add them to a Google Group, then invite the group to the closed test. They must remain opted-in continuously — a single tester opting out resets the counter, per multiple Reddit anecdotes.
+If you registered as an organization (Sole Proprietor / LLP) instead of personal, you skip this gate but need a D-U-N-S number, which takes 30+ days to obtain in India. Personal account is faster for you given the timeline.
+20. Identity verification (D-U-N-S, government ID)
+Personal account registration requires identity verification (legal name + government ID + address). Activation takes 24–48 hours typically, longer if any field flags review. The September 2026 Android Developer Verification rollout currently affects Brazil/Indonesia/Singapore/Thailand and expands globally in 2027 — for now, India is in the standard verification flow.
+21. App signing: Play App Signing is mandatory and irreversible
+You will be enrolled in Play App Signing on first upload. Google generates the app signing key and you keep an upload key. Back up your upload key with the same care as a master password. Losing it means key reset request via Google Support, which has historically been slow and not guaranteed. EAS Build manages this for you if you use EAS.
+22. Package name com.earnscroll.app is permanent
+First upload locks the package name to your developer account permanently. Verify that com.earnscroll.app is not in use on Play Store by searching https://play.google.com/store/apps/details?id=com.earnscroll.app before you create the app listing. From a quick search, that exact ID does not appear taken — but this should be re-checked the moment before you register.
+23. Pre-launch report customization
+You can configure the pre-launch report in Play Console with:
+
+Test account credentials (so Robo can sign in with a real Supabase user)
+Deep link scripts (telling Robo to skip past auth into the workout screen)
+Test instructions (a video walkthrough is enormously helpful for AccessibilityService apps)
+
+Without these, Robo will spend most of its time on your auth screen tapping random things and may hit the Supabase rate limiter. Add at least one tester credential.
+24. The "Use of Accessibility Service" declaration form takes time
+Even if you decide to keep AccessibilityService and submit the declaration, plan for 1–3 weeks of review with possible back-and-forth. Reviewers will ask follow-up questions. Submit this during your closed-testing 14-day window to parallelize, not after.
+
+TIER 5 — SMALLER GOTCHAS (low individual risk; collectively annoying)
+
+expo-apple-authentication on Android. Apple Sign-In is required by Apple if you offer Google Sign-In on iOS. On Android the value is questionable but harmless; just make sure the OAuth flow you implemented at contexts/Auth.tsx lines 162–197 doesn't crash if a user with no Apple ID lands on it.
+@sentry/react-native/expo plugin is registered with org vs3dman, project earnscroll. Sentry's source-map upload requires a SENTRY_AUTH_TOKEN at build time. Make sure your EAS build secrets have it, or upload-source-map step will silently skip and your stack traces will be gibberish in production.
+expo-speech is used to call out rep numbers. Vocal counting is a fun feature but if it triggers on the lock screen or in the background, that's a flag for "uses audio without user expectation." Confirm it only fires while the workout screen is active.
+__DEV__ checks scattered in production code. TimeBank line 119 (developer mode read), 197 (developer mode set), 484, 507. These are false in release bundles, so safe — but combined with FREE_LAUNCH_MODE they create a confusing matrix. Consider a single feature-flag module for clarity post-launch.
+expo-updates is disabled (AndroidManifest.xml line 18, expo.modules.updates.ENABLED=false). Fine — but if you later enable it for OTA updates, you must re-disclose update behavior in your Privacy Policy.
+Web build (public/) has a service worker and PWA manifest. None of this affects Play Store, but if you publish the same identity to a web URL, the Privacy Policy URL you give Google should also work for web users.
+No dark splash screen. Cosmetic only.
+App icon legibility. I can't view the asset directly, but reviewers reject icons that mimic Play Store branding or look like other system icons. Verify visually.
+Foreground service type is not declared. If you pivot to the UsageStatsManager polling approach, you'll need a foreground service with a declared android:foregroundServiceType (dataSync or specialUse) AND a Permission Declaration Form for Foreground Services. Plan the form alongside the others.
+
+
+Your decision tree
+The fastest-to-Play-Store path I'd recommend, in this order:
+Path A — Ship v1.0 without app blocking and without Pro. Strip the AccessibilityService entirely from the v1.0 build (keep FREE_LAUNCH_MODE = true, comment out the withEarnScrollNative plugin's manifest registration of the service). Ship as a "fitness gamification + future screen-time blocker" app. This eliminates Tier 1 #3, #4 (mostly), #5, and Tier 2 #6, #7 in one swing. You're left fixing only the Privacy Policy, account deletion, and the storage permissions — that's a 3–5 day fix. Then iterate the blocking feature in v1.1 with the AccessibilityService declaration done in parallel.
+Path B — Ship with blocking via UsageStatsManager polling. Rewrite BlockerService.kt to remove the extends AccessibilityService and replace with a ForegroundService that polls UsageStatsManager and notifies (not kills) on blocked-app launches. Lose the "hard block" UX, gain Play Store eligibility. Roughly a week of native work plus the foreground service Permission Declaration Form.
+Path C — Ship the blocking app but off Play Store first. Distribute through F-Droid or your own site, build an audience, then submit a Play-compliant version later. This is the path several similar apps have taken historically.
+I'd push you hard toward Path A because everything else in your codebase is solid and the time-to-revenue is days vs weeks. But you know your product priorities.
+
+Pre-submission checklist (everything in one place)
+Account & process
+
+ Personal Play Console account created, $25 fee paid, identity verified
+ 12 real testers recruited and added to a Google Group
+ Closed test running for ≥14 continuous days before requesting production
+ Upload keystore backed up off-device
+
+Privacy & legal
+
+ Real Privacy Policy written, hosted at a stable URL on a domain you own, reachable without login, covering camera (on-device), Supabase (auth + analytics tables), Sentry, EncryptedSharedPreferences, accessibility data (if kept), subscriptions (when added), children's data, account deletion, retention
+ Real Terms of Service replacing Lorem Ipsum
+ In-app app/privacy-policy.tsx and app/terms-of-service.tsx updated to mirror the hosted version OR opens the URL via Linking
+ Contact emails (privacy@, support@, legal@earnscroll.com) set up to receive mail
+ In-app Delete Account button in Settings, calling Supabase auth.admin.deleteUser via an Edge Function and clearing all user-scoped rows
+ Web URL for account deletion (e.g. earnscroll.com/delete-account) for users who can't access the app
+
+App content declarations
+
+ Data Safety form completed and aligned with manifest + Privacy Policy
+ Content rating questionnaire (likely Everyone)
+ Target audience: 13+ (avoids Designed for Families requirements)
+ Ads declaration: None
+
+Permissions
+
+ AccessibilityService: pivot per Path A/B/C above; if kept, submit declaration form with video and rebuild prominent disclosure UI
+ QUERY_ALL_PACKAGES: declaration form OR remove if you pivot to UsageStatsManager
+ SYSTEM_ALERT_WINDOW: declaration form OR remove
+ PACKAGE_USAGE_STATS: justification in Privacy Policy + Data Safety
+ READ/WRITE_EXTERNAL_STORAGE: identify source library, suppress with manifest merger override
+ AccessibilityService description string replaced with a meaningful sentence (if service kept)
+ Camera pre-permission disclosure screen added
+
+Backend hardening
+
+ RLS policies verified on every Supabase table (analytics_events, analytics_consent, user_sessions, diagnostic_logs)
+ Supabase auth email verification enabled
+ Sentry source-map upload working (auth token in EAS secrets)
+
+Build & technical
+
+ AAB built via EAS, 16 KB page size verified with apkanalyzer
+ Play App Signing enrollment confirmed
+ Package name com.earnscroll.app verified available
+ Pre-launch test credentials configured in Play Console
+ App version bumped to 1.0.0 and versionCode: 1
+
+Store listing
+
+ Title (≤30 chars), short description (≤80), full description (≤4000), no "#1/Best/Top" superlatives, no medical claims
+ 5+ phone screenshots (1080×2340 recommended), no fake CTAs overlaid
+ Feature graphic 1024×500
+ Icon 512×512, no Play Store branding lookalikes
+ Category: Health & Fitness (primary), Productivity (secondary)
+ Country availability: India only initially, expand after first review
+
+
+This is what I got from Claude Code when I wanted to optimize my app for the Play Store policies. So this is what it researched and gave me. Now I know there are a lot of things I still need to configure, such as my Play Console account and the payment process integration. But what I want you to do is make a very detailed plan on how you're going to execute the fixable items—everything you can do right now without altering my app, but to optimize it further for Play Store policies so I can push the app faster than I thought I could. Now I know that there are a few things that are not configured yet, but I will take care of them. Regarding the privacy policies, the data safety form, and the terms of service, I have created a legal file with information. However, that was a long time ago, and many changes have occurred since then. In the legal folder of my project, these three files are there. What I want you to do is now make a...Then, what I want you to do is create a well‑detailed plan on how we are going to implement all the changes, whatever you can fix right now. I just want the plan in a TXT file in the plans folder. And before you design this plan, ask me all sorts of questions and choices, whichever you think might need user intervention. And then, once the plan is completely ready, I'd like some instructions within the plan that, after we've fixed all the things, the legal folder will be completely revamped. All the latest checks will be provided within those files because they are obsolete as of now.
