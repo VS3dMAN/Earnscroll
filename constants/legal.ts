@@ -10,10 +10,10 @@ export const LEGAL_CONTACT = {
   support: 'virajsoni24x7@gmail.com',
 } as const;
 
-// Legal pages are live at the interim Vercel host below. Migrate these to the
-// https://earnscroll.com apex once the custom domain is attached to the Vercel
-// project (see legal/data-safety-form-guide.html §4). Set to true because
-// /privacy and /terms now resolve publicly, which removes the in-app banner.
+// Legal pages are live at the Vercel host below. If you later attach a custom
+// domain to the Vercel project, update these URLs (and legal/data-safety-form-guide.html §4)
+// to that domain. Set to true because /privacy and /terms now resolve publicly,
+// which removes the in-app banner.
 export const WEB_LEGAL_HOSTED = true;
 
 export const WEB_LEGAL_URLS = {
