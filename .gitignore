@@ -51,6 +51,9 @@ sentry.properties
 *.apk
 *.aab
 
+# One-off local scripts / scratch
+_ogtmp.js
+
 # Large binary assets — keep locally, don't commit to git
 V3.mov
 *.mov

@@ -81,8 +81,11 @@ A.4  Deploy the Delete Account Edge Function
        docs/supabase-rls-checklist.md to confirm every user-scoped table is
        empty for that user_id and that auth.users no longer contains them.
 
-A.5  (Optional but recommended) Set up Supabase backup retention to 45 days
-     so it matches the retention statement in the Privacy Policy.
+A.5  DONE — Free plan has no scheduled-backup option, so instead of paying
+     for it, the 45-day backup-retention claim was removed from the Privacy
+     Policy, the in-app delete-account screen, and the data-safety form
+     guide. Retention now states only: live data deleted immediately,
+     deletion_log audit row kept 30 days.
 
 
 ================================================================================

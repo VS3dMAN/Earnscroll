@@ -110,7 +110,7 @@ export default function PrivacyPolicyScreen() {
 
           <H theme={theme}>7. Data Retention</H>
           <P theme={theme}>
-            Live data is deleted immediately when you delete your account. Encrypted database backups are retained for up to 45 days and then irreversibly purged. A short non-PII deletion-audit row (your user id and the deletion timestamp) is retained for 30 days for compliance.
+            Live data is deleted immediately when you delete your account. A short non-PII deletion-audit row (your user id and the deletion timestamp) is retained for 30 days for compliance.
           </P>
 
           <H theme={theme}>8. Your Rights</H>

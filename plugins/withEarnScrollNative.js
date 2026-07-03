@@ -3,12 +3,13 @@ const {
     withMainApplication,
     withDangerousMod,
     withStringsXml,
+    withAppBuildGradle,
     AndroidConfig
 } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const ACCESSIBILITY_DESCRIPTION = "EarnScroll observes which app is in the foreground to block distracting apps you've selected when your earned-time bank is empty. It does not read screen content, text input, or any other app data.";
+const ACCESSIBILITY_DESCRIPTION = "EarnScroll observes which app is in the foreground to block distracting apps that you select when your earned-time bank is empty. It does not read screen content, text input, or any other app data.";
 
 const withEarnScrollNative = (config) => {
 
@@ -689,6 +690,27 @@ class BlockedActivity : Activity() {
 />`;
             fs.writeFileSync(path.join(resXmlPath, 'accessibility_service_config.xml'), xmlContent);
 
+            // F. Backup / data-extraction rules — keep the EncryptedSharedPreferences
+            //    store ("EarnScrollSecurePrefs") out of Google cloud backups and D2D
+            //    transfers. Referenced from the <application> element in the manifest mod
+            //    below; both files MUST exist or Android resource-linking fails.
+            const backupRulesContent = `<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="EarnScrollSecurePrefs.xml" />
+</full-backup-content>`;
+            fs.writeFileSync(path.join(resXmlPath, 'secure_store_backup_rules.xml'), backupRulesContent);
+
+            const dataExtractionContent = `<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="EarnScrollSecurePrefs.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="EarnScrollSecurePrefs.xml" />
+    </device-transfer>
+</data-extraction-rules>`;
+            fs.writeFileSync(path.join(resXmlPath, 'secure_store_data_extraction_rules.xml'), dataExtractionContent);
+
             return config;
         }
     ]);
@@ -706,6 +728,18 @@ class BlockedActivity : Activity() {
             $: { name: 'accessibility_service_description', translatable: 'false' },
             _: ACCESSIBILITY_DESCRIPTION,
         });
+        return config;
+    });
+
+    // 2.6. Add androidx.security-crypto dependency for EncryptedSharedPreferences
+    config = withAppBuildGradle(config, (config) => {
+        const dep = 'androidx.security:security-crypto:1.1.0-alpha06';
+        if (!config.modResults.contents.includes(dep)) {
+            config.modResults.contents = config.modResults.contents.replace(
+                /dependencies\s*\{/,
+                (match) => `${match}\n    implementation("${dep}")`
+            );
+        }
         return config;
     });
 
@@ -732,6 +766,13 @@ class BlockedActivity : Activity() {
                 });
             }
         }
+
+        // Point the application at the secure backup / data-extraction rules generated
+        // in the dangerous-mod above (files: res/xml/secure_store_backup_rules.xml and
+        // res/xml/secure_store_data_extraction_rules.xml). Setting them here (instead of
+        // hand-editing the committed manifest) keeps them stable across `prebuild --clean`.
+        mainApplication.$['android:fullBackupContent'] = '@xml/secure_store_backup_rules';
+        mainApplication.$['android:dataExtractionRules'] = '@xml/secure_store_data_extraction_rules';
 
         const service = {
             $: {

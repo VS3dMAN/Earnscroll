@@ -113,7 +113,6 @@ export default function DeleteAccountScreen() {
 
           <Section theme={theme} title="What we retain">
             <Bullet theme={theme} text="A short audit row (your user id + deletion timestamp) for 30 days, as required for compliance audits. It contains no PII." />
-            <Bullet theme={theme} text="Encrypted backups for up to 45 days, then irreversibly purged." />
           </Section>
 
           <Text style={[styles.confirmLabel, { color: theme.text }]}>
@@ -162,7 +161,7 @@ export default function DeleteAccountScreen() {
           </TouchableOpacity>
 
           <Text style={[styles.footerNote, { color: theme.textSecondary }]}>
-            Need help? Email privacy@earnscroll.com — we will action deletions within 30 days for requests made by email.
+            Need help? Email virajsoni24x7@gmail.com — we will action deletions within 30 days for requests made by email.
           </Text>
         </ScrollView>
       </View>

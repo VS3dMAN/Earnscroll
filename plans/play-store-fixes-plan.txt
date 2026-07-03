@@ -300,8 +300,9 @@ Inputs to the revamp (drawn from the now-final app state):
     sub IDs, analytics events (consent-gated), session records, diagnostic
     logs, crash reports (consent-gated)
   - Account deletion: in-app via Settings → Delete Account + future web URL
-  - Retention: 45 days for backups, immediate deletion of live data,
-    deletion_log retained 30 days for audit
+  - Retention: immediate deletion of live data, deletion_log retained
+    30 days for audit. No automated backup retention promised (Free plan
+    has no scheduled backups).
   - Children: 13+ only, no COPPA-protected data collection
   - Region: India initial, subject to local data protection norms (DPDP Act)
 
@@ -322,8 +323,7 @@ Required sections in privacy-policy.html:
       — name them explicitly with their privacy URLs
    6. On-device processing statement (camera frames + foreground-app
       observation never leave the device)
-   7. Data retention (live: immediate on deletion; backups: 45 days;
-      audit logs: 30 days)
+   7. Data retention (live: immediate on deletion; audit logs: 30 days)
    8. User rights: access, correction, deletion, portability — including
       the in-app Delete Account button + email path
    9. Children's policy (13+ only, no targeted advertising to minors)

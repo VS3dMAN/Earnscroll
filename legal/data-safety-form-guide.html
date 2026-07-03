@@ -128,7 +128,7 @@
   <h2>Section 2 — Cross-cutting answers</h2>
   <ul>
     <li><strong>Is all of the user data collected by your app encrypted in transit?</strong> <span class="yes">Yes.</span></li>
-    <li><strong>Do you provide a way for users to request that their data be deleted?</strong> <span class="yes">Yes.</span> Settings → Delete Account triggers an Edge Function that deletes all live data and the auth user immediately, plus a 30-day deletion-audit row. Users can also email <code>privacy@earnscroll.com</code>.</li>
+    <li><strong>Do you provide a way for users to request that their data be deleted?</strong> <span class="yes">Yes.</span> Settings → Delete Account triggers an Edge Function that deletes all live data and the auth user immediately, plus a 30-day deletion-audit row. Users can also email <code>virajsoni24x7@gmail.com</code>.</li>
     <li><strong>Did you commit to follow the Play Families Policy?</strong> No (target audience is 13+, not the Families program).</li>
   </ul>
 
@@ -147,12 +147,12 @@
   </div>
 
   <h2>Section 4 — Privacy Policy URL to paste into Play Console</h2>
-  <p>Use the hosted URL once it is live: <code>https://earnscroll.com/privacy</code>. Until then, do not submit for production review — Data Safety form requires a public URL.</p>
+  <p>Live public URL: <code>https://earnscroll-website.vercel.app/privacy</code>. (Interim host; migrate to <code>https://earnscroll.com/privacy</code> once the custom domain is attached to the Vercel project, then update this file and <code>constants/legal.ts</code>.)</p>
 
   <h2>Section 5 — Checklists</h2>
   <h3>(a) What to paste into Play Console verbatim</h3>
   <ul>
-    <li>Privacy Policy URL: <code>https://earnscroll.com/privacy</code></li>
+    <li>Privacy Policy URL: <code>https://earnscroll-website.vercel.app/privacy</code></li>
     <li>Per-category answers as above (use the tables in Section 1 — every row is one Play Console question).</li>
     <li>Permission Declarations for QUERY_ALL_PACKAGES, SYSTEM_ALERT_WINDOW (if kept), and BIND_ACCESSIBILITY_SERVICE — see <code>legal/play-permission-declarations.md</code> (generated next to this file).</li>
   </ul>
@@ -160,7 +160,7 @@
   <h3>(b) What to keep in sync between Privacy Policy and Data Safety form</h3>
   <ul>
     <li>The list of third-party processors (Supabase, Sentry, Google, Apple).</li>
-    <li>The retention schedule (live: immediate; backups: 45 days; deletion audit: 30 days).</li>
+    <li>The retention schedule (live: immediate; deletion audit: 30 days). No automated backup retention is promised — the project is on Supabase's Free plan, which does not include scheduled backups.</li>
     <li>The deletion mechanism (Settings → Delete Account + email path).</li>
     <li>The list of data categories collected. If you add or remove a category in the Privacy Policy, mirror the change here AND in the Settings → Privacy &amp; Data screen.</li>
   </ul>
