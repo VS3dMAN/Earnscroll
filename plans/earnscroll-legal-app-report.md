@@ -2,7 +2,7 @@
 
 **Prepared for**: Privacy Policy, Terms of Service, and Regulatory Compliance Pages  
 **App Name**: EarnScroll: Screen-Time Gym  
-**Package ID**: `com.earnscroll.app`  
+**Package ID**: `com.earnscroll_earnyourscreentime.app`  
 **Version**: 1.0.0  
 **Developer**: Viraj Soni (virajsonib901@gmail.com)  
 **Contact Emails**: privacy@earnscroll.com, support@earnscroll.com  
@@ -77,11 +77,10 @@ EarnScroll uses **Supabase** (supabase.co) as its authentication backend. The fo
 | Email + Password | Email address, bcrypt-hashed password (Supabase manages hashing) |
 | Google OAuth | Google account email, OAuth tokens |
 | Apple Sign-In | Apple-provided email or relay email, identity token |
-| Phone OTP (SMS) | Phone number, one-time passcode via SMS |
 
 **Session management**: Auth session tokens (access token and refresh token) are stored in the device's AsyncStorage because they exceed the 2,048-byte limit of encrypted secure storage. Sessions auto-refresh and persist across app restarts. Users are signed out when they manually sign out or when sessions expire.
 
-**Password reset**: Users can request a password reset link to their registered email. The link redirects via the scheme `myapp://auth/callback`.
+**Password reset**: Users can request a password reset link to their registered email. The link redirects via the scheme `earnscroll://auth/callback`.
 
 **Account deletion**: A data deletion mechanism is not yet implemented in the current version. This is a compliance gap (see Section 11).
 
@@ -142,7 +141,6 @@ Only authentication-related data is transmitted:
 |-----------|-----------------|----------------------|
 | Email address | On signup / sign-in | Yes (in Supabase Auth database) |
 | Password (hashed) | On signup | Yes (Supabase manages hashing) |
-| Phone number | On phone OTP signup | Yes |
 | Google OAuth tokens | On Google sign-in | Yes (session tokens) |
 | Apple identity token | On Apple sign-in | Yes (session tokens) |
 | Auth session tokens | On every auth operation | Yes (Supabase session store) |
@@ -189,8 +187,8 @@ Only authentication-related data is transmitted:
 ### 8.1 Supabase (Authentication Backend)
 
 - **Provider**: Supabase Inc. (supabase.co)
-- **Purpose**: User authentication (email, OAuth, phone OTP), session management
-- **Data shared**: Email, phone, OAuth tokens, session tokens
+- **Purpose**: User authentication (email, OAuth), session management
+- **Data shared**: Email, OAuth tokens, session tokens
 - **Data location**: Supabase cloud infrastructure (AWS)
 - **Privacy policy**: https://supabase.com/privacy
 - **Notes**: The Supabase anonymous (public) API key is embedded in the app bundle. This is standard practice — the key is not a secret. Row-level security on the Supabase backend controls data access.

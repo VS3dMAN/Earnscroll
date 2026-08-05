@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, AppState } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
-import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor } from 'react-native-vision-camera';
-import { useTensorflowModel } from 'react-native-fast-tflite';
+import { Camera, runAtTargetFps, useCameraDevice, useCameraPermission, useFrameProcessor } from 'react-native-vision-camera';
+import { useTensorflowModel, type TensorflowModelDelegate } from 'react-native-fast-tflite';
 import { useResizePlugin } from 'vision-camera-resize-plugin';
 import { useSharedValue, Worklets } from 'react-native-worklets-core';
 import { useTimeBank } from '@/contexts/TimeBank';
@@ -12,17 +12,45 @@ import { useRouter } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
+import PoseSkeletonOverlay from '@/components/PoseSkeletonOverlay';
+import {
+    KP,
+    POSE_FLOAT_COUNT,
+    bestSideAngle,
+    countConfidentKeypoints,
+} from '@/utils/poseMath';
+import {
+    POSE_BUFFER_LENGTH,
+    POSE_IDX_FRAME_H,
+    POSE_IDX_FRAME_W,
+    POSE_IDX_KEYPOINTS,
+    POSE_IDX_ROTATION,
+    POSE_IDX_TIMESTAMP,
+    POSE_IDX_VALID,
+    rotationForOrientation,
+} from '@/utils/poseProjection';
 
 // --- TYPES ---
 type ExerciseType = 'squats' | 'pushups' | 'planks';
 type Phase = 'idle' | 'up' | 'down' | 'holding';
-type Keypoint = { x: number; y: number; s: number };
 
-// A keypoint must clear this confidence to be trusted. Raised from 0.3 — the lower
-// value let low-confidence (often wrong) joints drive rep counting.
-const CONFIDENCE_THRESHOLD = 0.4;
 // Require this many confident keypoints overall before we believe a person is in frame.
 const MIN_KEYPOINTS_VISIBLE = 6;
+
+// MoveNet SinglePose Thunder takes a 256x256 uint8 input (Lightning was 192x192).
+const MODEL_INPUT_SIZE = 256;
+
+// Thunder is ~2-3x the per-frame cost of Lightning, so run inference well below the
+// camera's framerate rather than on every frame. Rep detection needs far less than
+// 30fps: PHASE_CONFIRM_FRAMES = 2 is still a ~133ms confirmation window at 15fps, and
+// MIN_REP_DURATION_MS = 400 is ~6 inference frames, so neither needed retuning.
+const INFERENCE_TARGET_FPS = 15;
+
+// CPU. The `android-gpu` delegate needs the react-native-fast-tflite Expo config
+// plugin with `enableAndroidGpuLibraries`, which this app does not currently declare
+// in app.json — without it the OpenCL libs aren't in the APK and the delegate can't
+// load. See the model-load effect below, which validates whatever delegate is set.
+const INFERENCE_DELEGATE: TensorflowModelDelegate = 'default';
 
 // Angle thresholds for each exercise (degrees)
 const SQUAT_DOWN_ANGLE = 100;  // knee must bend to at least this
@@ -52,19 +80,16 @@ const MAX_REP_DURATION_MS = 10000;
 
 // Exponential moving average on the rep-driving joint angle. Lower alpha = smoother
 // (less weight on the newest, noisiest frame) but slightly laggier.
-const ANGLE_EMA_ALPHA = 0.5;
+//
+// Raised from 0.5 with the Thunder swap. Alpha is a per-*sample* weight, so dropping
+// the sample rate to INFERENCE_TARGET_FPS doubles the wall-clock lag it introduces:
+// 0.5 was ~66ms of lag at 30fps but ~133ms at 15fps. Thunder is also less jittery than
+// Lightning, so there is less noise left to suppress. 0.7 restores roughly the original
+// ~95ms response. PHASE_CONFIRM_FRAMES still guards against single-frame flickers.
+const ANGLE_EMA_ALPHA = 0.7;
 
 // Throttle how often the worklet reports tracking quality back to the JS UI (~12fps).
 const TRACKING_PUSH_INTERVAL_MS = 80;
-
-const KP = {
-    LEFT_SHOULDER: 5, RIGHT_SHOULDER: 6,
-    LEFT_ELBOW: 7, RIGHT_ELBOW: 8,
-    LEFT_WRIST: 9, RIGHT_WRIST: 10,
-    LEFT_HIP: 11, RIGHT_HIP: 12,
-    LEFT_KNEE: 13, RIGHT_KNEE: 14,
-    LEFT_ANKLE: 15, RIGHT_ANKLE: 16,
-};
 
 export default function NativeWorkoutCamera() {
     const { hasPermission, requestPermission } = useCameraPermission();
@@ -98,8 +123,11 @@ export default function NativeWorkoutCamera() {
     const [trackingQuality, setTrackingQuality] = useState<number>(0);
 
     // AI & Worklets — using react-native-worklets-core for VisionCamera compatibility
-    const plugin = useTensorflowModel(require('../assets/models/movenet_lightning.tflite'));
+    const plugin = useTensorflowModel(require('../assets/models/movenet_thunder.tflite'), INFERENCE_DELEGATE);
     const { resize } = useResizePlugin();
+    // Latest keypoints, published every inference frame for the skeleton overlay.
+    // Read on the UI thread by PoseSkeletonOverlay — never crosses to the JS thread.
+    const poseBuffer = useSharedValue<number[]>(new Array(POSE_BUFFER_LENGTH).fill(0));
     const currentPhase = useSharedValue<string>('idle');
     const lastActionTime = useSharedValue<number>(0);
     const pendingPhase = useSharedValue<string>('');
@@ -132,10 +160,49 @@ export default function NativeWorkoutCamera() {
             log('error', 'tflite_model_load_failed', { camera_facing: cameraFacing });
         } else if (plugin.state === 'loaded' && plugin.model) {
             setModelStatus('');
+            const model = plugin.model;
             console.log('✓ TFLite model loaded successfully');
-            console.log('  Inputs:', JSON.stringify(plugin.model.inputs?.map(t => ({ name: t.name, shape: t.shape, dataType: t.dataType }))));
-            console.log('  Outputs:', JSON.stringify(plugin.model.outputs?.map(t => ({ name: t.name, shape: t.shape, dataType: t.dataType }))));
+            console.log('  Delegate:', model.delegate);
+            console.log('  Inputs:', JSON.stringify(model.inputs?.map(t => ({ name: t.name, shape: t.shape, dataType: t.dataType }))));
+            console.log('  Outputs:', JSON.stringify(model.outputs?.map(t => ({ name: t.name, shape: t.shape, dataType: t.dataType }))));
+
+            // Verify the swapped-in model is shaped the way the frame processor assumes:
+            // 256x256x3 uint8 in, [1, 1, 17, 3] (y, x, score) out. A mismatch here means
+            // the wrong .tflite got bundled, so fail loudly rather than silently mis-index.
+            const input = model.inputs?.[0];
+            const output = model.outputs?.[0];
+            const inputOk = input?.shape?.join('x') === `1x${MODEL_INPUT_SIZE}x${MODEL_INPUT_SIZE}x3`;
+            const outputOk = output?.shape?.join('x') === '1x1x17x3';
+            if (!inputOk || !outputOk) {
+                console.warn(`✗ Unexpected model tensor shapes — in: ${input?.shape}, out: ${output?.shape}`);
+                setModelStatus('AI model shape mismatch');
+                log('error', 'tflite_model_shape_unexpected', {
+                    input_shape: String(input?.shape),
+                    output_shape: String(output?.shape),
+                });
+                return;
+            }
+
+            // One-shot sanity inference on a blank frame. This is what catches a
+            // delegate that loads fine but emits empty/NaN output — the failure mode
+            // GPU/NNAPI delegates hit on models they don't fully support.
+            try {
+                const probe = model.runSync([new Uint8Array(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3)])[0];
+                let finite = 0;
+                for (let i = 0; i < POSE_FLOAT_COUNT; i++) {
+                    if (Number.isFinite(Number(probe?.[i]))) finite++;
+                }
+                if (finite < POSE_FLOAT_COUNT) {
+                    console.warn(`✗ Delegate "${model.delegate}" produced non-finite output (${finite}/${POSE_FLOAT_COUNT} usable) — switch INFERENCE_DELEGATE back to 'default'.`);
+                    log('error', 'tflite_delegate_bad_output', { delegate: model.delegate, finite_values: finite });
+                } else {
+                    console.log(`  Sanity inference OK on "${model.delegate}" (${finite}/${POSE_FLOAT_COUNT} finite outputs)`);
+                }
+            } catch (e) {
+                console.warn('✗ Sanity inference threw:', e);
+            }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [plugin.state, plugin.model]);
 
     // We deliberately do NOT auto-request the camera permission on mount.
@@ -228,231 +295,219 @@ export default function NativeWorkoutCamera() {
     // --- AI FRAME PROCESSOR (Worklet) ---
     const frameProcessor = useFrameProcessor((frame) => {
         'worklet';
-        if (plugin.model == null) return;
-        if (!isRecordingShared.value) return;
+        const model = plugin.model;
+        if (model == null) return;
 
+        // Throttle inference to INFERENCE_TARGET_FPS. Everything below — including the
+        // overlay publish — runs at that rate, not the camera's framerate.
         try {
-            // Center-crop the frame to a square BEFORE scaling to 192x192. MoveNet
-            // expects square input; scaling a non-square frame to a square stretches
-            // X and Y by different factors and distorts every joint angle. Cropping
-            // first keeps the scale uniform so angles stay accurate. (If reps ever
-            // stop counting entirely, this `crop` is the first thing to remove.)
-            const fw = frame.width;
-            const fh = frame.height;
-            const side = fw < fh ? fw : fh;
-            const cropX = Math.round((fw - side) / 2);
-            const cropY = Math.round((fh - side) / 2);
+            runAtTargetFps(INFERENCE_TARGET_FPS, () => {
+                'worklet';
+                // Center-crop the frame to a square BEFORE scaling to 256x256. MoveNet
+                // expects square input; scaling a non-square frame to a square stretches
+                // X and Y by different factors and distorts every joint angle. Cropping
+                // first keeps the scale uniform so angles stay accurate. (If reps ever
+                // stop counting entirely, this `crop` is the first thing to remove.)
+                const fw = frame.width;
+                const fh = frame.height;
+                const side = fw < fh ? fw : fh;
+                const cropX = Math.round((fw - side) / 2);
+                const cropY = Math.round((fh - side) / 2);
 
-            const resized = resize(frame, {
-                crop: { x: cropX, y: cropY, width: side, height: side },
-                scale: { width: 192, height: 192 },
-                pixelFormat: 'rgb',
-                dataType: 'uint8',
-            });
-            const outputs = plugin.model.runSync([resized]);
-            const raw = outputs[0];
-            if (!raw || raw.length < 51) return;
+                const resized = resize(frame, {
+                    crop: { x: cropX, y: cropY, width: side, height: side },
+                    scale: { width: MODEL_INPUT_SIZE, height: MODEL_INPUT_SIZE },
+                    pixelFormat: 'rgb',
+                    dataType: 'uint8',
+                });
+                const outputs = model.runSync([resized]);
+                const raw = outputs[0];
+                if (!raw || raw.length < POSE_FLOAT_COUNT) return;
 
-            // MoveNet Lightning: output shape [1, 1, 17, 3] flattened to 51 floats
-            // Each keypoint: [y, x, confidence_score]
-            const getKP = (i: number): Keypoint => {
-                const idx = i * 3;
-                return {
-                    y: Number(raw[idx] ?? 0),
-                    x: Number(raw[idx + 1] ?? 0),
-                    s: Number(raw[idx + 2] ?? 0),
+                // MoveNet Thunder: output shape [1, 1, 17, 3] flattened to 51 floats.
+                // Each keypoint: [y, x, confidence_score] — identical layout to
+                // Lightning, so every index and threshold below is unchanged.
+
+                // --- Publish keypoints for the skeleton overlay. ---
+                // Deliberately outside the isRecording gate: the overlay must be live
+                // before START so the user can frame themselves. This writes to a
+                // shared value read on the UI thread, and never touches rep state.
+                const payload = new Array<number>(POSE_BUFFER_LENGTH);
+                payload[POSE_IDX_TIMESTAMP] = frame.timestamp;
+                payload[POSE_IDX_FRAME_W] = fw;
+                payload[POSE_IDX_FRAME_H] = fh;
+                payload[POSE_IDX_ROTATION] = rotationForOrientation(frame.orientation);
+                payload[POSE_IDX_VALID] = 1;
+                for (let i = 0; i < POSE_FLOAT_COUNT; i++) {
+                    payload[POSE_IDX_KEYPOINTS + i] = Number(raw[i] ?? 0);
+                }
+                poseBuffer.value = payload;
+
+                // --- Everything below is rep counting; only runs while recording. ---
+                if (!isRecordingShared.value) return;
+
+                // Exponential moving average on the rep-driving angle. Invalid (-1)
+                // readings don't pollute the average; the last good value is kept.
+                // Stays in the closure (unlike the pure helpers in utils/poseMath)
+                // because it reads and writes worklet shared state.
+                const smooth = (rawAngle: number): number => {
+                    if (rawAngle < 0) return smoothedAngle.value;
+                    if (smoothedAngle.value < 0) {
+                        smoothedAngle.value = rawAngle;
+                        return rawAngle;
+                    }
+                    const s = ANGLE_EMA_ALPHA * rawAngle + (1 - ANGLE_EMA_ALPHA) * smoothedAngle.value;
+                    smoothedAngle.value = s;
+                    return s;
                 };
-            };
 
-            // Angle calculation — returns -1 if any keypoint has low confidence
-            const getAngle = (a: Keypoint, b: Keypoint, c: Keypoint): number => {
-                if (a.s < CONFIDENCE_THRESHOLD || b.s < CONFIDENCE_THRESHOLD || c.s < CONFIDENCE_THRESHOLD) return -1;
-                const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-                let angle = Math.abs(radians * 180.0 / Math.PI);
-                if (angle > 180.0) angle = 360 - angle;
-                return angle;
-            };
+                // Confirm phase: only commit a phase change after PHASE_CONFIRM_FRAMES consecutive detections
+                const trySetPhase = (newPhase: string): boolean => {
+                    if (pendingPhase.value === newPhase) {
+                        pendingFrames.value += 1;
+                        if (pendingFrames.value >= PHASE_CONFIRM_FRAMES) {
+                            currentPhase.value = newPhase;
+                            pendingPhase.value = '';
+                            pendingFrames.value = 0;
+                            return true;
+                        }
+                        return false;
+                    } else {
+                        pendingPhase.value = newPhase;
+                        pendingFrames.value = 1;
+                        return false;
+                    }
+                };
 
-            // Pick best side (highest avg confidence)
-            const pickBestSide = (leftIdxs: number[], rightIdxs: number[]): Keypoint[] => {
-                let leftConf = 0;
-                let rightConf = 0;
-                const leftKPs: Keypoint[] = [];
-                const rightKPs: Keypoint[] = [];
-                for (let i = 0; i < leftIdxs.length; i++) {
-                    const l = getKP(leftIdxs[i]);
-                    const r = getKP(rightIdxs[i]);
-                    leftConf += l.s;
-                    rightConf += r.s;
-                    leftKPs.push(l);
-                    rightKPs.push(r);
+                // --- Person-presence gate. Don't count anything if we can't see enough of the body. ---
+                // Reads scores straight out of the flat output — no object per keypoint.
+                const confident = countConfidentKeypoints(raw);
+
+                // Report tracking quality to the UI (throttled) so the user knows whether
+                // the camera can actually see them.
+                const nowTrack = Date.now();
+                if (nowTrack - lastTrackingPush.value >= TRACKING_PUSH_INTERVAL_MS) {
+                    lastTrackingPush.value = nowTrack;
+                    onTracking(confident);
                 }
-                return leftConf >= rightConf ? leftKPs : rightKPs;
-            };
 
-            // Exponential moving average on the rep-driving angle. Invalid (-1) readings
-            // don't pollute the average; the last good value is kept.
-            const smooth = (rawAngle: number): number => {
-                if (rawAngle < 0) return smoothedAngle.value;
-                if (smoothedAngle.value < 0) {
-                    smoothedAngle.value = rawAngle;
-                    return rawAngle;
+                if (confident < MIN_KEYPOINTS_VISIBLE) {
+                    onFeedback("Step into frame");
+                    pendingPhase.value = '';
+                    pendingFrames.value = 0;
+                    smoothedAngle.value = -1;
+                    return;
                 }
-                const s = ANGLE_EMA_ALPHA * rawAngle + (1 - ANGLE_EMA_ALPHA) * smoothedAngle.value;
-                smoothedAngle.value = s;
-                return s;
-            };
 
-            // Confirm phase: only commit a phase change after PHASE_CONFIRM_FRAMES consecutive detections
-            const trySetPhase = (newPhase: string): boolean => {
-                if (pendingPhase.value === newPhase) {
-                    pendingFrames.value += 1;
-                    if (pendingFrames.value >= PHASE_CONFIRM_FRAMES) {
-                        currentPhase.value = newPhase;
+                const now = Date.now();
+                const exercise = selectedExerciseShared.value;
+
+                if (exercise === 'squats') {
+                    // POSTURE CHECK (rotation-invariant): hip angle (shoulder-hip-knee)
+                    // must be > threshold = torso is upright relative to thigh
+                    const hipAngle = bestSideAngle(
+                        raw,
+                        KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_KNEE,
+                        KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_KNEE,
+                    );
+                    if (hipAngle >= 0 && hipAngle < SQUAT_HIP_ANGLE_MIN) {
+                        onFeedback("Stand upright");
                         pendingPhase.value = '';
                         pendingFrames.value = 0;
-                        return true;
+                        smoothedAngle.value = -1;
+                        return;
                     }
-                    return false;
-                } else {
-                    pendingPhase.value = newPhase;
-                    pendingFrames.value = 1;
-                    return false;
-                }
-            };
 
-            // --- Person-presence gate. Don't count anything if we can't see enough of the body. ---
-            let confident = 0;
-            for (let i = 0; i < 17; i++) {
-                if (getKP(i).s >= CONFIDENCE_THRESHOLD) confident++;
-            }
-
-            // Report tracking quality to the UI (throttled) so the user knows whether
-            // the camera can actually see them.
-            const nowTrack = Date.now();
-            if (nowTrack - lastTrackingPush.value >= TRACKING_PUSH_INTERVAL_MS) {
-                lastTrackingPush.value = nowTrack;
-                onTracking(confident);
-            }
-
-            if (confident < MIN_KEYPOINTS_VISIBLE) {
-                onFeedback("Step into frame");
-                pendingPhase.value = '';
-                pendingFrames.value = 0;
-                smoothedAngle.value = -1;
-                return;
-            }
-
-            const now = Date.now();
-            const exercise = selectedExerciseShared.value;
-
-            if (exercise === 'squats') {
-                // Get all keypoints needed for squats
-                const [shoulderS, hipS, kneeS] = pickBestSide(
-                    [KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_KNEE],
-                    [KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_KNEE]
-                );
-                const [hipJ, knee, ankle] = pickBestSide(
-                    [KP.LEFT_HIP, KP.LEFT_KNEE, KP.LEFT_ANKLE],
-                    [KP.RIGHT_HIP, KP.RIGHT_KNEE, KP.RIGHT_ANKLE]
-                );
-
-                // POSTURE CHECK (rotation-invariant): hip angle (shoulder-hip-knee)
-                // must be > threshold = torso is upright relative to thigh
-                const hipAngle = getAngle(shoulderS, hipS, kneeS);
-                if (hipAngle >= 0 && hipAngle < SQUAT_HIP_ANGLE_MIN) {
-                    onFeedback("Stand upright");
-                    pendingPhase.value = '';
-                    pendingFrames.value = 0;
-                    smoothedAngle.value = -1;
-                    return;
-                }
-
-                const rawKnee = getAngle(hipJ, knee, ankle);
-                if (rawKnee < 0) {
-                    // Can't see the leg reliably — hold state, don't count.
-                    onFeedback("Show your legs");
-                    return;
-                }
-                const kneeAngle = smooth(rawKnee);
-
-                if (kneeAngle < SQUAT_DOWN_ANGLE && (currentPhase.value === 'up' || currentPhase.value === 'idle')) {
-                    if (trySetPhase('down')) {
-                        downEnteredAt.value = now;
-                        onFeedback("SQUAT DOWN!");
+                    const rawKnee = bestSideAngle(
+                        raw,
+                        KP.LEFT_HIP, KP.LEFT_KNEE, KP.LEFT_ANKLE,
+                        KP.RIGHT_HIP, KP.RIGHT_KNEE, KP.RIGHT_ANKLE,
+                    );
+                    if (rawKnee < 0) {
+                        // Can't see the leg reliably — hold state, don't count.
+                        onFeedback("Show your legs");
+                        return;
                     }
-                } else if (kneeAngle > SQUAT_UP_ANGLE && currentPhase.value === 'down') {
-                    if (trySetPhase('up')) {
-                        const dur = now - downEnteredAt.value;
-                        if (now - lastActionTime.value > REP_DEBOUNCE_MS && dur >= MIN_REP_DURATION_MS && dur <= MAX_REP_DURATION_MS) {
-                            lastActionTime.value = now;
-                            onRep('squats');
+                    const kneeAngle = smooth(rawKnee);
+
+                    if (kneeAngle < SQUAT_DOWN_ANGLE && (currentPhase.value === 'up' || currentPhase.value === 'idle')) {
+                        if (trySetPhase('down')) {
+                            downEnteredAt.value = now;
+                            onFeedback("SQUAT DOWN!");
+                        }
+                    } else if (kneeAngle > SQUAT_UP_ANGLE && currentPhase.value === 'down') {
+                        if (trySetPhase('up')) {
+                            const dur = now - downEnteredAt.value;
+                            if (now - lastActionTime.value > REP_DEBOUNCE_MS && dur >= MIN_REP_DURATION_MS && dur <= MAX_REP_DURATION_MS) {
+                                lastActionTime.value = now;
+                                onRep('squats');
+                            }
                         }
                     }
-                }
-            } else if (exercise === 'pushups') {
-                // POSTURE CHECK (rotation-invariant): body alignment (shoulder-hip-ankle)
-                // must be > threshold = body is extended/straight (prone position)
-                const [shoulderB, hipB, ankleB] = pickBestSide(
-                    [KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_ANKLE],
-                    [KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_ANKLE]
-                );
-                const bodyAngle = getAngle(shoulderB, hipB, ankleB);
-                if (bodyAngle >= 0 && bodyAngle < PUSHUP_BODY_ANGLE_MIN) {
-                    onFeedback("Get in pushup position");
-                    pendingPhase.value = '';
-                    pendingFrames.value = 0;
-                    smoothedAngle.value = -1;
-                    return;
-                }
-
-                const [shoulderJ, elbow, wrist] = pickBestSide(
-                    [KP.LEFT_SHOULDER, KP.LEFT_ELBOW, KP.LEFT_WRIST],
-                    [KP.RIGHT_SHOULDER, KP.RIGHT_ELBOW, KP.RIGHT_WRIST]
-                );
-                const rawElbow = getAngle(shoulderJ, elbow, wrist);
-                if (rawElbow < 0) {
-                    onFeedback("Show your arms");
-                    return;
-                }
-                const elbowAngle = smooth(rawElbow);
-
-                if (elbowAngle < PUSHUP_DOWN_ANGLE && (currentPhase.value === 'up' || currentPhase.value === 'idle')) {
-                    if (trySetPhase('down')) {
-                        downEnteredAt.value = now;
-                        onFeedback("PUSH UP!");
+                } else if (exercise === 'pushups') {
+                    // POSTURE CHECK (rotation-invariant): body alignment (shoulder-hip-ankle)
+                    // must be > threshold = body is extended/straight (prone position)
+                    const bodyAngle = bestSideAngle(
+                        raw,
+                        KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_ANKLE,
+                        KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_ANKLE,
+                    );
+                    if (bodyAngle >= 0 && bodyAngle < PUSHUP_BODY_ANGLE_MIN) {
+                        onFeedback("Get in pushup position");
+                        pendingPhase.value = '';
+                        pendingFrames.value = 0;
+                        smoothedAngle.value = -1;
+                        return;
                     }
-                } else if (elbowAngle > PUSHUP_UP_ANGLE && currentPhase.value === 'down') {
-                    if (trySetPhase('up')) {
-                        const dur = now - downEnteredAt.value;
-                        if (now - lastActionTime.value > REP_DEBOUNCE_MS && dur >= MIN_REP_DURATION_MS && dur <= MAX_REP_DURATION_MS) {
-                            lastActionTime.value = now;
-                            onRep('pushups');
+
+                    const rawElbow = bestSideAngle(
+                        raw,
+                        KP.LEFT_SHOULDER, KP.LEFT_ELBOW, KP.LEFT_WRIST,
+                        KP.RIGHT_SHOULDER, KP.RIGHT_ELBOW, KP.RIGHT_WRIST,
+                    );
+                    if (rawElbow < 0) {
+                        onFeedback("Show your arms");
+                        return;
+                    }
+                    const elbowAngle = smooth(rawElbow);
+
+                    if (elbowAngle < PUSHUP_DOWN_ANGLE && (currentPhase.value === 'up' || currentPhase.value === 'idle')) {
+                        if (trySetPhase('down')) {
+                            downEnteredAt.value = now;
+                            onFeedback("PUSH UP!");
+                        }
+                    } else if (elbowAngle > PUSHUP_UP_ANGLE && currentPhase.value === 'down') {
+                        if (trySetPhase('up')) {
+                            const dur = now - downEnteredAt.value;
+                            if (now - lastActionTime.value > REP_DEBOUNCE_MS && dur >= MIN_REP_DURATION_MS && dur <= MAX_REP_DURATION_MS) {
+                                lastActionTime.value = now;
+                                onRep('pushups');
+                            }
                         }
                     }
-                }
-            } else if (exercise === 'planks') {
-                const [shoulderJ, hipJ, ankle] = pickBestSide(
-                    [KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_ANKLE],
-                    [KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_ANKLE]
-                );
-                const rawBody = getAngle(shoulderJ, hipJ, ankle);
-                if (rawBody < 0) {
-                    onFeedback("Show your full body");
-                    return;
-                }
-                const bodyAngle = smooth(rawBody);
-
-                if (bodyAngle > PLANK_MIN_ANGLE && bodyAngle < PLANK_MAX_ANGLE) {
-                    if (now - lastActionTime.value > PLANK_TICK_MS) {
-                        lastActionTime.value = now;
-                        onRep('planks');
-                        onFeedback("Holding...");
+                } else if (exercise === 'planks') {
+                    const rawBody = bestSideAngle(
+                        raw,
+                        KP.LEFT_SHOULDER, KP.LEFT_HIP, KP.LEFT_ANKLE,
+                        KP.RIGHT_SHOULDER, KP.RIGHT_HIP, KP.RIGHT_ANKLE,
+                    );
+                    if (rawBody < 0) {
+                        onFeedback("Show your full body");
+                        return;
                     }
-                } else {
-                    onFeedback("Straighten Back!");
+                    const bodyAngle = smooth(rawBody);
+
+                    if (bodyAngle > PLANK_MIN_ANGLE && bodyAngle < PLANK_MAX_ANGLE) {
+                        if (now - lastActionTime.value > PLANK_TICK_MS) {
+                            lastActionTime.value = now;
+                            onRep('planks');
+                            onFeedback("Holding...");
+                        }
+                    } else {
+                        onFeedback("Straighten Back!");
+                    }
                 }
-            }
+            });
         } catch (e) {
             // Silently handle frame processing errors
         }
@@ -509,6 +564,10 @@ export default function NativeWorkoutCamera() {
                 pixelFormat="yuv"
             />
 
+            {/* Live skeleton. Sits directly on the preview and is driven entirely from
+                the UI thread, so it stays smooth regardless of JS-thread load. */}
+            <PoseSkeletonOverlay pose={poseBuffer} mirrored={cameraFacing === 'front'} />
+
             <View style={styles.overlay}>
                 {modelStatus !== '' && (
                     <View style={styles.modelStatusContainer}>
@@ -536,7 +595,7 @@ export default function NativeWorkoutCamera() {
 
                 {showSelector && (
                     <ScrollView contentContainerStyle={styles.selectorContainer}>
-                        <Text style={styles.selectorHeader}>// SELECT PROTOCOL</Text>
+                        <Text style={styles.selectorHeader}>{'// SELECT PROTOCOL'}</Text>
                         {['squats', 'pushups', 'planks'].map((ex) => {
                             const isLocked = !isUserPro && userFreeExercise !== ex;
                             return (

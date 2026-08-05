@@ -6,13 +6,15 @@ const ERROR_MAP: Record<string, string> = {
   email_not_confirmed: 'Please check your email to verify your account.',
   user_already_exists: 'An account with this email already exists.',
   weak_password: 'Password must be at least 8 characters.',
-  otp_expired: 'Verification code has expired. Please request a new one.',
+  otp_expired: 'That link has expired. Please request a new one.',
   over_request_rate_limit: 'Too many attempts. Please wait a few minutes.',
-  invalid_otp: 'Invalid verification code. Please try again.',
+  // Email confirmation / recovery links carry a one-time token; a reused or
+  // tampered link surfaces as invalid_otp.
+  invalid_otp: 'That link is no longer valid. Please request a new one.',
   signup_disabled: 'Sign ups are currently disabled.',
   user_not_found: 'No account found with this email.',
   same_password: 'New password must be different from the old password.',
-  otp_disabled: 'Phone sign-in is not enabled.',
+  email_address_invalid: 'That email address does not look deliverable. Please check it.',
 };
 
 const NETWORK_ERROR_MESSAGES = [
@@ -60,12 +62,3 @@ export const SignUpSchema = z
     path: ['confirmPassword'],
   });
 
-export const PhoneSchema = z.object({
-  phone: z
-    .string()
-    .regex(/^\+[1-9]\d{6,14}$/, 'Enter a valid phone number with country code (e.g. +1234567890).'),
-});
-
-export const OtpSchema = z.object({
-  otp: z.string().length(6, 'Please enter the 6-digit code.'),
-});

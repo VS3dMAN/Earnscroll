@@ -6,13 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Mail, Lock, Phone, Chrome, Apple } from 'lucide-react-native';
+import { Mail, Lock, Chrome, Apple } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/Auth';
 import { useTheme } from '@/contexts/Theme';
@@ -23,16 +22,30 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendNotice, setResendNotice] = useState('');
 
-  const { signInWithEmail, signInWithGoogle, signInWithApple, continueAsGuest } = useAuth();
+  const {
+    signInWithEmail,
+    signInWithGoogle,
+    signInWithApple,
+    continueAsGuest,
+    resendConfirmationEmail,
+  } = useAuth();
   const themeContext = useTheme();
   const theme = themeContext?.theme;
   const isDark = theme?.isDark ?? true;
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const handleSignIn = async () => {
+  const resetFeedback = () => {
     setError('');
+    setResendNotice('');
+    setShowResend(false);
+  };
+
+  const handleSignIn = async () => {
+    resetFeedback();
     const result = EmailPasswordSchema.safeParse({ email, password });
     if (!result.success) {
       setError(result.error.errors[0].message);
@@ -45,11 +58,28 @@ export default function LoginScreen() {
 
     if (!success && authError) {
       setError(authError);
+      // An unconfirmed account is otherwise a dead end — the user can neither
+      // sign in nor sign up again. Offer to resend the confirmation link.
+      setShowResend(/verify your account/i.test(authError));
+    }
+  };
+
+  const handleResend = async () => {
+    setResendNotice('');
+    setLoading(true);
+    const { success, error: authError } = await resendConfirmationEmail(email);
+    setLoading(false);
+    if (success) {
+      setError('');
+      setShowResend(false);
+      setResendNotice(`Confirmation link sent to ${email}.`);
+    } else if (authError) {
+      setError(authError);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    setError('');
+    resetFeedback();
     setLoading(true);
     const { success, error: authError } = await signInWithGoogle();
     setLoading(false);
@@ -59,17 +89,13 @@ export default function LoginScreen() {
   };
 
   const handleAppleSignIn = async () => {
-    setError('');
+    resetFeedback();
     setLoading(true);
     const { success, error: authError } = await signInWithApple();
     setLoading(false);
     if (!success && authError && authError !== 'Sign-in was cancelled.') {
       setError(authError);
     }
-  };
-
-  const handlePhoneSignIn = () => {
-    router.push('/(auth)/verify-phone');
   };
 
   const handleGuestMode = async () => {
@@ -135,6 +161,18 @@ export default function LoginScreen() {
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+          {showResend ? (
+            <TouchableOpacity onPress={handleResend} disabled={loading}>
+              <Text style={[styles.linkText, { color: accentColor }]}>
+                Resend confirmation email
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {resendNotice ? (
+            <Text style={[styles.noticeText, { color: accentColor }]}>{resendNotice}</Text>
+          ) : null}
+
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: accentColor }]}
             onPress={handleSignIn}
@@ -182,16 +220,6 @@ export default function LoginScreen() {
           )}
         </View>
 
-        {/* Phone Sign In */}
-        <TouchableOpacity
-          style={[styles.phoneButton, { backgroundColor: cardBg, borderColor }]}
-          onPress={handlePhoneSignIn}
-          disabled={loading}
-        >
-          <Phone size={18} color={textColor} />
-          <Text style={[styles.phoneButtonText, { color: textColor }]}>Sign in with Phone</Text>
-        </TouchableOpacity>
-
         {/* Guest Mode */}
         <TouchableOpacity style={styles.guestButton} onPress={handleGuestMode}>
           <Text style={[styles.guestButtonText, { color: textSecondary }]}>Continue as Guest</Text>
@@ -200,7 +228,7 @@ export default function LoginScreen() {
         {/* Sign Up Link */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: textSecondary }]}>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
           </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
             <Text style={[styles.footerLink, { color: accentColor }]}>Sign Up</Text>
@@ -261,6 +289,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
   },
+  noticeText: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+  },
   primaryButton: {
     borderRadius: 12,
     height: 50,
@@ -310,25 +342,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_500Medium',
   },
-  phoneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    height: 50,
-    gap: 8,
-    marginTop: 12,
-  },
-  phoneButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
-  },
   guestButton: {
     alignItems: 'center',
     justifyContent: 'center',
     height: 44,
-    marginTop: 8,
+    marginTop: 20,
   },
   guestButtonText: {
     fontSize: 14,

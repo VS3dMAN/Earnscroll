@@ -31,7 +31,7 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
   const themeContext = useTheme();
   const isDark = themeContext?.theme?.isDark ?? true;
   const { isLoading: isTimeBankLoading, hasCompletedOnboarding } = useTimeBank();
-  const { isLoading: isAuthLoading, isAuthenticated, isGuest } = useAuth();
+  const { isLoading: isAuthLoading, isAuthenticated, isGuest, isPasswordRecovery } = useAuth();
   const isHydrated = themeContext?.isHydrated ?? false;
 
   const segments = useSegments();
@@ -52,6 +52,17 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
 
     const inAuthGroup = segments[0] === '(auth)';
     const onOnboarding = segments[0] === 'onboarding';
+    const onResetPassword = (segments as string[]).includes('reset-password');
+
+    // A password-recovery link creates a real session, so the checks below
+    // would otherwise wave the user straight into the app without them ever
+    // setting a new password. Pin them to the reset screen first.
+    if (isPasswordRecovery) {
+      if (!onResetPassword) {
+        router.replace('/(auth)/reset-password');
+      }
+      return;
+    }
 
     if (!isAuthenticated && !isGuest && !inAuthGroup) {
       // Not logged in and not a guest — go to login
@@ -68,7 +79,7 @@ function AppContent({ fontsLoaded }: { fontsLoaded: boolean }) {
       // it (e.g. deep link straight to a tab) — force onboarding first.
       router.replace('/onboarding');
     }
-  }, [isReady, isAuthenticated, isGuest, segments, hasCompletedOnboarding]);
+  }, [isReady, isAuthenticated, isGuest, isPasswordRecovery, segments, hasCompletedOnboarding]);
 
   useEffect(() => {
     if (!isReady) return;

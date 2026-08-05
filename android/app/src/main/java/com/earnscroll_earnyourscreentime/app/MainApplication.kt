@@ -1,4 +1,4 @@
-package com.earnscroll.app
+package com.earnscroll_earnyourscreentime.app
 
 import com.earnscroll.EarnScrollPackage
 

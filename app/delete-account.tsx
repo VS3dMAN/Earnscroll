@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/Theme';
 import { useAuth } from '@/contexts/Auth';
-import { supabase } from '@/utils/supabase';
 
 const CONFIRM_TEXT = 'DELETE';
 
@@ -26,7 +25,7 @@ export default function DeleteAccountScreen() {
     danger: '#EF4444',
     isDark: true,
   };
-  const { session, signOut } = useAuth();
+  const { session, signOut, deleteAccount } = useAuth();
   const [confirmInput, setConfirmInput] = useState('');
   const [deleting, setDeleting] = useState(false);
 
@@ -42,16 +41,13 @@ export default function DeleteAccountScreen() {
 
     setDeleting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('delete-account', {
-        body: { reason: 'user_initiated' },
-      });
+      const { success, error } = await deleteAccount('user_initiated');
 
-      if (error || !data?.ok) {
-        const msg =
-          (data && typeof data.error === 'string' && data.error) ||
-          (error && error.message) ||
-          'Deletion failed. Please try again or contact support.';
-        Alert.alert('Could not delete account', msg);
+      if (!success) {
+        Alert.alert(
+          'Could not delete account',
+          error || 'Deletion failed. Please try again or contact support.',
+        );
         setDeleting(false);
         return;
       }
@@ -69,7 +65,7 @@ export default function DeleteAccountScreen() {
       }
 
       await signOut();
-      router.replace('/onboarding');
+      router.replace('/(auth)/login');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Deletion failed.';
       Alert.alert('Could not delete account', msg);

@@ -133,9 +133,9 @@ that user.
 
 ### 1.7 Auth providers
 Under **Authentication → Providers** you toggle Email, Google, Apple, Phone. Each external
-provider needs credentials (Google/Apple OAuth client, Twilio for phone). If a provider is off,
+provider needs credentials (Google/Apple OAuth client). If a provider is off,
 tapping it in the app just errors — enable only the ones you ship. Redirect URL must include
-`myapp://auth/callback` (matches the app's scheme). Details are in `manual-setup-checklist.txt`
+`earnscroll://auth/callback` (matches the app's scheme). Details are in `manual-setup-checklist.txt`
 Step 5.
 
 ### 1.8 Health checks Supabase gives you for free

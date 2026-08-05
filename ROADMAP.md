@@ -82,7 +82,7 @@ These are imported/used in code but **not listed** in `package.json`:
 - [x] **Add iOS configuration block** — `app.json` has no `"ios"` section. Required for iOS builds and App Store submission. Add:
   ```json
   "ios": {
-    "bundleIdentifier": "com.earnscroll.app",
+    "bundleIdentifier": "com.earnscroll_earnyourscreentime.app",
     "supportsTablet": true,
     "infoPlist": {
       "NSCameraUsageDescription": "EarnScroll needs camera access to track your exercises in real-time",

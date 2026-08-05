@@ -1,7 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, processLock } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, Platform } from 'react-native';
 
-// Replace these with your Supabase project credentials.
 // These are PUBLIC keys — safe to embed in the app.
 // Find them at: Supabase Dashboard > Settings > API
 const SUPABASE_URL = 'https://zurahjqghjratswjjpsg.supabase.co';
@@ -20,6 +20,31 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: SupabaseStorage,
     autoRefreshToken: true,
     persistSession: true,
+    // No window.location on native, so there is never a URL to read the
+    // session out of. We hand the redirect URL to Supabase ourselves in
+    // contexts/Auth.tsx.
     detectSessionInUrl: false,
+    // PKCE keeps tokens out of the redirect URL entirely — the browser only
+    // ever carries a single-use `code`, which is worthless without the
+    // verifier held in this app's storage. Required for OAuth, magic links
+    // and password-recovery links to be safe on mobile.
+    flowType: 'pkce',
+    // React Native has no `navigator.locks`; without an explicit lock,
+    // concurrent refreshes can race and clobber the stored session.
+    lock: processLock,
   },
 });
+
+// Supabase only refreshes the access token while a timer is running. On mobile
+// that timer is frozen while the app is backgrounded, so a user who leaves the
+// app for longer than the token lifetime comes back to a dead session unless
+// we restart the refresher on foreground.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}

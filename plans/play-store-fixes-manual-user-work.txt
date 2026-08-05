@@ -162,9 +162,9 @@ D.1  Create the Play Console developer account
        upload an APK before this completes.
 
 D.2  Create the EarnScroll listing
-     - Use package name: com.earnscroll.app
+     - Use package name: com.earnscroll_earnyourscreentime.app
      - Confirm the name is still available BEFORE pressing "Create" by
-       opening play.google.com/store/apps/details?id=com.earnscroll.app
+       opening play.google.com/store/apps/details?id=com.earnscroll_earnyourscreentime.app
        in an incognito tab — if it returns 404, the name is unclaimed.
 
 D.3  Fill the Data Safety form

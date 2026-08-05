@@ -377,7 +377,7 @@ Use these inside phone mockup frames in the hero section and feature sections.
 
 ## IMPORTANT NOTES
 
-- The Play Store link is not yet live. Use `https://play.google.com/store/apps/details?id=com.earnscroll.app` as a placeholder.
+- The Play Store link is not yet live. Use `https://play.google.com/store/apps/details?id=com.earnscroll_earnyourscreentime.app` as a placeholder.
 - The app is Android-first. iOS is secondary (no blocker on iOS). Don't show an App Store badge — only Google Play.
 - All emails (privacy@, support@, legal@) should be `mailto:` links.
 - The website must work as the URL submitted to Google Play Console for the privacy policy and terms of service. Those pages must be directly accessible at `/privacy-policy` and `/terms-of-service` without JavaScript (SSG/pre-rendered or plain HTML).

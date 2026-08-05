@@ -9,7 +9,7 @@ You're on Expo SDK 54 (expo@^54.0.33, RN 0.81.5), not SDK 52. CLAUDE.md and the 
 You DO have a backend. @supabase/supabase-js, full auth (email, Google OAuth, Apple Sign-In, phone OTP, guest mode), Sentry diagnostics, server-side analytics events, sessions, diagnostic logs, and consent records all hit Supabase tables. That changes the data-safety story significantly compared with what the older docs say.
 Only ONE accessibility service is wired up. plugins/withAppBlocker.js exists but is NOT registered in app.json's plugins array. Only withEarnScrollNative.js is active, registering com.earnscroll.BlockerService. Good — but if you ever add the other plugin, you'll have two services in one APK and that's a major red flag (see below).
 
-Package: com.earnscroll.app (matches both Android package and iOS bundleIdentifier). App name: "EarnScroll: Screen-Time Gym". Slug: earnscroll-screen-time-gym.
+Package: com.earnscroll_earnyourscreentime.app (matches both Android package and iOS bundleIdentifier). App name: "EarnScroll: Screen-Time Gym". Slug: earnscroll-screen-time-gym.
 
 The picture in one sentence
 If you submit today, you will be rejected, and depending on the reviewer it could escalate from a "fix this and resubmit" to a developer-account warning. The combination of (a) AccessibilityService used to autonomously kill apps, (b) literal Lorem Ipsum legal pages, (c) a Supabase backend with no in-app account deletion, and (d) three high-risk permissions with no Permission Declaration Forms prepared is roughly the worst-case mix Play Console looks for.
@@ -140,8 +140,8 @@ If you registered as an organization (Sole Proprietor / LLP) instead of personal
 Personal account registration requires identity verification (legal name + government ID + address). Activation takes 24–48 hours typically, longer if any field flags review. The September 2026 Android Developer Verification rollout currently affects Brazil/Indonesia/Singapore/Thailand and expands globally in 2027 — for now, India is in the standard verification flow.
 21. App signing: Play App Signing is mandatory and irreversible
 You will be enrolled in Play App Signing on first upload. Google generates the app signing key and you keep an upload key. Back up your upload key with the same care as a master password. Losing it means key reset request via Google Support, which has historically been slow and not guaranteed. EAS Build manages this for you if you use EAS.
-22. Package name com.earnscroll.app is permanent
-First upload locks the package name to your developer account permanently. Verify that com.earnscroll.app is not in use on Play Store by searching https://play.google.com/store/apps/details?id=com.earnscroll.app before you create the app listing. From a quick search, that exact ID does not appear taken — but this should be re-checked the moment before you register.
+22. Package name com.earnscroll_earnyourscreentime.app is permanent
+First upload locks the package name to your developer account permanently. Verify that com.earnscroll_earnyourscreentime.app is not in use on Play Store by searching https://play.google.com/store/apps/details?id=com.earnscroll_earnyourscreentime.app before you create the app listing. From a quick search, that exact ID does not appear taken — but this should be re-checked the moment before you register.
 23. Pre-launch report customization
 You can configure the pre-launch report in Play Console with:
 
@@ -217,7 +217,7 @@ Build & technical
 
  AAB built via EAS, 16 KB page size verified with apkanalyzer
  Play App Signing enrollment confirmed
- Package name com.earnscroll.app verified available
+ Package name com.earnscroll_earnyourscreentime.app verified available
  Pre-launch test credentials configured in Play Console
  App version bumped to 1.0.0 and versionCode: 1
 

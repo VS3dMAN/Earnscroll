@@ -146,15 +146,13 @@ Go to Supabase dashboard → EarnScroll project → Authentication → Providers
      - Add authorized redirect URI: https://zurahjqghjratswjjpsg.supabase.co/auth/v1/callback
      - Note: Native iOS Apple Sign In is separate (handled by expo-apple-authentication)
 
-  d) PHONE OTP
-     - Toggle Phone to ON
-     - Requires a Twilio (or Vonage/MessageBird) account
-     - Paste Account SID, Auth Token, and a phone number into Supabase
+  d) PHONE OTP — REMOVED, nothing to do
+     - Phone sign-in was dropped from the app. Leave the Phone provider OFF.
 
   e) REDIRECT URLs
      - Go to Authentication → URL Configuration
-     - Add to "Redirect URLs": myapp://auth/callback
-     - This must match the scheme in app.json ("scheme": "myapp")
+     - Add to "Redirect URLs": earnscroll://auth/callback
+     - This must match the scheme in app.json ("scheme": "earnscroll")
 
   Skip any provider you don't plan to ship — users will just get an error if they tap it.
 

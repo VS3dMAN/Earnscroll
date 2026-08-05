@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -42,15 +41,21 @@ export default function SignUpScreen() {
     }
 
     setLoading(true);
-    const { success: authSuccess, error: authError } = await signUpWithEmail(email, password);
+    const { success: authSuccess, error: authError, needsEmailConfirmation } =
+      await signUpWithEmail(email, password);
     setLoading(false);
 
-    if (!authSuccess && authError) {
-      setError(authError);
+    if (!authSuccess) {
+      setError(authError ?? 'Sign up failed. Please try again.');
       return;
     }
 
-    setSuccess(true);
+    // When email confirmation is disabled Supabase returns a live session and
+    // the auth guard takes the user straight into the app — showing the
+    // "check your email" panel would strand them on a dead end.
+    if (needsEmailConfirmation) {
+      setSuccess(true);
+    }
   };
 
   const bg = isDark ? '#090F1B' : '#F8FAFC';

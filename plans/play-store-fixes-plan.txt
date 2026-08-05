@@ -38,8 +38,8 @@ PHASE 0 — Pre-flight (read-only verification, before any edits)
        the diff and stop — we need to know which files are generated vs.
        hand-edited before we start editing native source.
   0.2  Run `npm run lint` and capture the current baseline (failures, if any).
-  0.3  Confirm package name `com.earnscroll.app` is still available on Play
-       Store by opening play.google.com/store/apps/details?id=com.earnscroll.app
+  0.3  Confirm package name `com.earnscroll_earnyourscreentime.app` is still available on Play
+       Store by opening play.google.com/store/apps/details?id=com.earnscroll_earnyourscreentime.app
        — USER ACTION, but record the result in a comment in app.json.
 
 --------------------------------------------------------------------------------
@@ -432,7 +432,7 @@ ITEMS EXCLUDED FROM THIS PLAN (USER ACTION REQUIRED, in roughly this order)
        legal/play-permission-declarations.md.
   X.7  Fill Data Safety form using legal/data-safety-form-guide.html.
   X.8  Fill Content Rating questionnaire (expect Everyone or Everyone 10+).
-  X.9  Verify com.earnscroll.app package name is still unclaimed; lock it
+  X.9  Verify com.earnscroll_earnyourscreentime.app package name is still unclaimed; lock it
        on first upload.
   X.10 Configure pre-launch report with a throwaway test account credential
        so Robo can sign in.
