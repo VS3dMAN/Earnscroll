@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EarnScroll: Screen-Time Gym",
+    "name": "Kenri: Screen-Time Gym",
     "slug": "earnscroll-screen-time-gym",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,7 +18,7 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera to track your workouts.",
-        "NSMotionUsageDescription": "EarnScroll uses motion data to enhance exercise tracking accuracy"
+        "NSMotionUsageDescription": "Kenri uses motion data to enhance exercise tracking accuracy"
       }
     },
     "web": {
@@ -71,7 +71,7 @@
         }
       ],
       "expo-asset",
-      "./plugins/withEarnScrollNative",
+      "./plugins/withKenriNative",
       "expo-font",
       "expo-secure-store",
       "expo-web-browser",

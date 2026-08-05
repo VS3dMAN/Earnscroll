@@ -9,9 +9,9 @@ const {
 const fs = require('fs');
 const path = require('path');
 
-const ACCESSIBILITY_DESCRIPTION = "EarnScroll observes which app is in the foreground to block distracting apps that you select when your earned-time bank is empty. It does not read screen content, text input, or any other app data.";
+const ACCESSIBILITY_DESCRIPTION = "Kenri observes which app is in the foreground to block distracting apps that you select when your earned-time bank is empty. It does not read screen content, text input, or any other app data.";
 
-const withEarnScrollNative = (config) => {
+const withKenriNative = (config) => {
 
     // 1. Add Permissions Safely
     config = AndroidConfig.Permissions.withPermissions(config, [
@@ -610,9 +610,9 @@ class BlockedActivity : Activity() {
         }
         root.addView(subtitle)
 
-        // "Open EarnScroll" button
+        // "Open Kenri" button
         val openBtn = Button(this).apply {
-            text = "Open EarnScroll"
+            text = "Open Kenri"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
@@ -875,4 +875,4 @@ class BlockedActivity : Activity() {
     return config;
 };
 
-module.exports = withEarnScrollNative;
+module.exports = withKenriNative;
