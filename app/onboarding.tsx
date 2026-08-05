@@ -101,7 +101,7 @@ export default function OnboardingScreen() {
           <View style={styles.logoContainer}>
             <Dumbbell size={48} color={colors.primary} strokeWidth={2.5} />
           </View>
-          <Text style={styles.title}>Welcome to EarnScroll!</Text>
+          <Text style={styles.title}>Welcome to Kenri!</Text>
           <Text style={styles.subtitle}>
             Pick one exercise to use for free.{'\n'}You can switch it later from Settings.
           </Text>

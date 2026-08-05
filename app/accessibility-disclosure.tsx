@@ -82,7 +82,7 @@ export default function AccessibilityDisclosureScreen() {
           <Section
             theme={theme}
             title="What this does"
-            body="EarnScroll uses Android's Accessibility API to block distracting apps you select when your earned-time bank is empty. Open a blocked app, see a block screen; work out, earn time, regain access."
+            body="Kenri uses Android's Accessibility API to block distracting apps you select when your earned-time bank is empty. Open a blocked app, see a block screen; work out, earn time, regain access."
           />
 
           <Section
@@ -105,7 +105,7 @@ export default function AccessibilityDisclosureScreen() {
 
           <View style={[styles.infoBox, { backgroundColor: theme.isDark ? 'rgba(34, 211, 238, 0.08)' : 'rgba(34, 211, 238, 0.1)', borderColor: 'rgba(34, 211, 238, 0.25)' }]}>
             <Text style={[styles.infoBoxText, { color: theme.textSecondary }]}>
-              You can revoke this permission at any time in Android Settings → Accessibility → EarnScroll.
+              You can revoke this permission at any time in Android Settings → Accessibility → Kenri.
             </Text>
           </View>
 

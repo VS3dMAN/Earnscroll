@@ -100,7 +100,7 @@ export default function GoProScreen() {
           </View>
           <Text style={[styles.title, { fontSize: 24 }]}>Account Required</Text>
           <Text style={[styles.subtitle, { marginBottom: 24 }]}>
-            Create an account or sign in to unlock EarnScroll Pro and access all premium features.
+            Create an account or sign in to unlock Kenri Pro and access all premium features.
           </Text>
           <TouchableOpacity
             style={styles.guestSignInButton}
@@ -137,7 +137,7 @@ export default function GoProScreen() {
             <View style={styles.crownContainer}>
               <Crown size={64} color="#FFD700" fill="#FFD700" />
             </View>
-            <Text style={styles.title}>Unlock EarnScroll Pro</Text>
+            <Text style={styles.title}>Unlock Kenri Pro</Text>
             <Text style={styles.subtitle}>
               Get full access to all features and supercharge your workouts
             </Text>

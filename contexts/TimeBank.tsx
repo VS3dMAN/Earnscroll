@@ -231,7 +231,7 @@ export const [TimeBankProvider, useTimeBank] = createContextHook(() => {
     }
   }, [earnedMinutes]);
 
-  // When EarnScroll returns to foreground, read back natively-drained minutes
+  // When Kenri returns to foreground, read back natively-drained minutes
   useEffect(() => {
     if (Platform.OS === 'web') return;
     const sub = AppState.addEventListener('change', async (nextState) => {

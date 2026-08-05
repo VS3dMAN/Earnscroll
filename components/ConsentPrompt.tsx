@@ -59,7 +59,7 @@ export function ConsentPrompt() {
           </View>
 
           <Text style={[styles.title, { color: theme.text }]}>
-            Help Improve EarnScroll
+            Help Improve Kenri
           </Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
             Share anonymous data to help us fix bugs and build better features.
