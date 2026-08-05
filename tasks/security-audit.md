@@ -1,4 +1,4 @@
-# EarnScroll Security Audit Report
+# Kenri Security Audit Report
 
 **Date:** 2026-04-12
 **App Version:** 1.0.0
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-EarnScroll is a fitness gamification app that uses camera-based ML for exercise detection and an Android accessibility service for app blocking. The app has solid fundamentals (no code injection, local-only camera processing, proper permission scoping) but has critical flaws in data protection, state integrity verification, and build security that must be addressed before production release.
+Kenri is a fitness gamification app that uses camera-based ML for exercise detection and an Android accessibility service for app blocking. The app has solid fundamentals (no code injection, local-only camera processing, proper permission scoping) but has critical flaws in data protection, state integrity verification, and build security that must be addressed before production release.
 
 ---
 
@@ -20,7 +20,7 @@ EarnScroll is a fitness gamification app that uses camera-based ML for exercise 
 
 **Files:**
 - `contexts/TimeBank.tsx` (lines 25-36, 122-132)
-- `plugins/withEarnScrollNative.js` (lines 94-141)
+- `plugins/withKenriNative.js` (lines 94-141)
 
 **Issue:** All time bank data is stored as plaintext in both AsyncStorage (JS layer) and SharedPreferences (native layer) with no encryption or integrity verification.
 
@@ -134,7 +134,7 @@ await AsyncStorage.setItem(IS_USER_PRO_KEY, newProStatus.toString());
 ### 2.2 Blocked Apps List Unprotected in SharedPreferences
 
 **Files:**
-- `plugins/withEarnScrollNative.js` (lines 94-101, 250-251, 307-318)
+- `plugins/withKenriNative.js` (lines 94-101, 250-251, 307-318)
 
 **Issue:** The blocked packages JSON is stored as a plain string with no encryption, signature, or size limit.
 
@@ -154,7 +154,7 @@ editor.putString("blocked_packages", jsonString) // Plain JSON: ["com.foo","com.
 
 ### 2.3 Accessibility Service Over-Permissioned
 
-**File:** `plugins/withEarnScrollNative.js` (line 478)
+**File:** `plugins/withKenriNative.js` (line 478)
 
 **Issue:** The accessibility service config declares `canRetrieveWindowContent="true"` but the service never reads window content - it only checks `event.packageName`.
 
@@ -283,7 +283,7 @@ const addMinutes = useCallback(async (minutes: number) => {
 
 ### 4.2 Timestamp-Based Time Deduction Bypassable
 
-**File:** `plugins/withEarnScrollNative.js` (lines 266-277)
+**File:** `plugins/withKenriNative.js` (lines 266-277)
 
 **Issue:** Time deduction uses `System.currentTimeMillis()`. Users could manipulate system time to slow deduction.
 
@@ -377,7 +377,7 @@ Run `npm audit` regularly. Key packages to monitor:
 
 - `contexts/TimeBank.tsx` - Core state management
 - `contexts/Theme.tsx` - Theme persistence
-- `plugins/withEarnScrollNative.js` - Native module generation
+- `plugins/withKenriNative.js` - Native module generation
 - `plugins/withAppBlocker.js` - App blocker plugin
 - `components/NativeWorkoutCamera.tsx` - ML exercise detection
 - `app/settings.tsx` - Settings screen

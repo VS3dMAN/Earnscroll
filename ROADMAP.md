@@ -1,6 +1,6 @@
-# EarnScroll: Complete Fix & Deploy Roadmap
+# Kenri: Complete Fix & Deploy Roadmap
 
-> **What this is:** A full audit of every issue, bug, missing feature, and task in the EarnScroll codebase.  
+> **What this is:** A full audit of every issue, bug, missing feature, and task in the Kenri codebase.  
 > **How to use it:** Work through phases in order. Each checkbox is one atomic task. When all phases are complete, the app is near-deployment ready.  
 > **Last audited:** 2026-04-04  
 
@@ -8,7 +8,7 @@
 
 ## Project Summary (Context for Future Sessions)
 
-**EarnScroll: Screen-Time Gym** is a React Native + Expo (SDK 52, RN 0.76.6) mobile app where users earn screen time by doing exercises (squats, pushups, planks) detected via AI camera (TensorFlow MoveNet). Earned minutes go into a "Time Bank." The app has a freemium model (1 free exercise vs all 3 for Pro) and an app-blocking feature (Targets) that's supposed to lock device apps behind exercise requirements.
+**Kenri: Screen-Time Gym** is a React Native + Expo (SDK 52, RN 0.76.6) mobile app where users earn screen time by doing exercises (squats, pushups, planks) detected via AI camera (TensorFlow MoveNet). Earned minutes go into a "Time Bank." The app has a freemium model (1 free exercise vs all 3 for Pro) and an app-blocking feature (Targets) that's supposed to lock device apps behind exercise requirements.
 
 **Current state:** The app has solid UI, architecture, and documentation — but it **cannot run out of the box**. Dependencies aren't installed, critical packages are missing from `package.json`, native code doesn't exist, the AI camera only works on web, app blocking is UI-only, payments are mocked, and there are multiple logic bugs.
 
@@ -27,7 +27,7 @@
 - `app/go-pro.tsx` — Premium upgrade screen ~469 lines
 - `app/developer-menu.tsx` — Hidden dev tools ~449 lines
 - `plugins/withAppBlocker.js` — Expo config plugin for Android blocker ~120 lines
-- `plugins/withEarnScrollNative.js` — Expo config plugin for native module ~306 lines
+- `plugins/withKenriNative.js` — Expo config plugin for native module ~306 lines
 - `native-src/` — **EMPTY** — supposed to contain Kotlin source files
 - `assets/models/movenet_lightning.tflite` — AI model (4.7MB)
 - `backups/workout_logic_reference.tsx` — Old web-based workout logic (1557 lines, dead code)
@@ -67,7 +67,7 @@ These are imported/used in code but **not listed** in `package.json`:
   "eslint-config-expo": "latest"
   ```
 
-- [ ] **Verify `@expo/config-plugins` availability** — `plugins/withAppBlocker.js` line 1 and `plugins/withEarnScrollNative.js` line 1 import from `@expo/config-plugins`. This ships with `expo` as a transitive dep, but verify it resolves after install. If not, add explicitly.
+- [ ] **Verify `@expo/config-plugins` availability** — `plugins/withAppBlocker.js` line 1 and `plugins/withKenriNative.js` line 1 import from `@expo/config-plugins`. This ships with `expo` as a transitive dep, but verify it resolves after install. If not, add explicitly.
 
 ### 0.3 — Fix `package.json` Scripts
 
@@ -85,8 +85,8 @@ These are imported/used in code but **not listed** in `package.json`:
     "bundleIdentifier": "com.earnscroll_earnyourscreentime.app",
     "supportsTablet": true,
     "infoPlist": {
-      "NSCameraUsageDescription": "EarnScroll needs camera access to track your exercises in real-time",
-      "NSMotionUsageDescription": "EarnScroll uses motion data to enhance exercise tracking"
+      "NSCameraUsageDescription": "Kenri needs camera access to track your exercises in real-time",
+      "NSMotionUsageDescription": "Kenri uses motion data to enhance exercise tracking"
     }
   }
   ```
@@ -251,7 +251,7 @@ These are imported/used in code but **not listed** in `package.json`:
 
 - [ ] **Add accessibility service permission flow** — Users must manually enable the accessibility service in Android settings. Add an onboarding step or settings option that deep-links to the accessibility settings page with instructions.
 
-- [x] **Fix security issue in `withEarnScrollNative.js`** — Line 221: `android:exported='true'` on the accessibility service exposes it to other apps. Change to `android:exported='false'`.
+- [x] **Fix security issue in `withKenriNative.js`** — Line 221: `android:exported='true'` on the accessibility service exposes it to other apps. Change to `android:exported='false'`.
 
 - [ ] **Add iOS equivalent or "Android only" messaging** — App blocking via accessibility services is Android-specific. On iOS, add clear messaging that this feature requires Android, or research iOS Screen Time API alternatives.
 
@@ -428,7 +428,7 @@ The app has a proper color system in `constants/colors.ts` but most screens bypa
 
 ### 3.6 — Security Fixes
 
-- [x] **Fix exported accessibility service** — `plugins/withEarnScrollNative.js` line 221: `android:exported='true'` exposes the blocking service to other apps. Must be `android:exported='false'`.
+- [x] **Fix exported accessibility service** — `plugins/withKenriNative.js` line 221: `android:exported='true'` exposes the blocking service to other apps. Must be `android:exported='false'`.
 
 - [ ] **Encrypt sensitive AsyncStorage data** — Time bank, streak, and Pro status are stored in plain text. A user with device access can edit AsyncStorage directly to give themselves unlimited time or Pro status. Consider `expo-secure-store` for sensitive values like `@is_user_pro`.
 

@@ -1,3 +1,5 @@
+> Historical document. Written when the app was named EarnScroll (now Kenri).
+
 # EarnScroll — Security Review for v1 Play Store Launch
 
 **Date:** 2026-07-03

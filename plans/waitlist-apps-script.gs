@@ -1,6 +1,7 @@
 /**
- * EarnScroll Waitlist — Google Apps Script web app
- * Bound to the "EarnScroll Waitlist" Google Sheet.
+ * Kenri Waitlist — Google Apps Script web app
+ * Bound to the "EarnScroll Waitlist" Google Sheet (sheet name unchanged — renaming
+ * it would break the binding; the sheet ID below is the authoritative reference).
  * Receives name + email from the website's Coming Soon modal and appends a row.
  *
  * SETUP (one time):
@@ -9,7 +10,7 @@
  *   2. Extensions → Apps Script.
  *   3. Delete any starter code, paste ALL of this file, click Save (disk icon).
  *   4. Deploy → New deployment → gear icon → Web app.
- *        - Description: EarnScroll waitlist
+ *        - Description: Kenri waitlist
  *        - Execute as: Me (your account)
  *        - Who has access: Anyone
  *      Click Deploy, then Authorize access and allow the permissions.
@@ -44,7 +45,7 @@ function doPost(e) {
 // Optional: lets you open the /exec URL in a browser to confirm it's live.
 function doGet() {
   return ContentService
-    .createTextOutput('EarnScroll waitlist endpoint is running.')
+    .createTextOutput('Kenri waitlist endpoint is running.')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 

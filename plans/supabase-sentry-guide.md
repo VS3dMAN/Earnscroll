@@ -1,4 +1,4 @@
-# EarnScroll — Supabase & Sentry, from 0 to 100
+# Kenri — Supabase & Sentry, from 0 to 100
 
 A plain-English, hands-on guide to the two cloud services your app uses, plus a clear mental
 model of what your app is doing "in the background." Written for you to run day-to-day even if
@@ -7,7 +7,7 @@ you've never touched a backend dashboard. Read it once top to bottom; after that
 
 Your specifics (so the guide is concrete):
 - **Supabase project ref:** `zurahjqghjratswjjpsg` (region `ap-northeast-1`, Tokyo).
-  Dashboard: https://supabase.com/dashboard → project **EarnScroll**.
+  Dashboard: https://supabase.com/dashboard → project **Kenri**.
 - **Sentry org:** `vs3dman`, EU region. Issues: https://vs3dman.sentry.io/issues/
 - Related in-repo docs: [`docs/supabase-rls-checklist.md`](../docs/supabase-rls-checklist.md),
   [`plans/manual-setup-checklist.txt`](manual-setup-checklist.txt),
@@ -17,7 +17,7 @@ Your specifics (so the guide is concrete):
 
 ## Part 0 — How your app actually works (the mental model)
 
-Think of EarnScroll as **local-first**. Almost everything happens on the phone; the cloud is a
+Think of Kenri as **local-first**. Almost everything happens on the phone; the cloud is a
 thin, optional layer.
 
 **On the phone (no internet needed):**

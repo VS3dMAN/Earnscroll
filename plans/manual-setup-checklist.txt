@@ -1,4 +1,4 @@
-EARNSCROLL MANUAL SETUP CHECKLIST
+KENRI MANUAL SETUP CHECKLIST
 Generated: 2026-05-19
 ===================================
 
@@ -12,11 +12,11 @@ BLOCKING — DO THESE FIRST
 
 STEP 1 — Resume Supabase project
 ---------------------------------
-The EarnScroll Supabase project is currently PAUSED (INACTIVE).
+The Kenri Supabase project is currently PAUSED (INACTIVE).
 Until resumed, ALL auth and analytics calls will silently fail.
 
   a) Go to https://supabase.com/dashboard
-  b) Select the "EarnScroll" project (region: ap-northeast-1)
+  b) Select the "Kenri" project (region: ap-northeast-1)
   c) Click "Restore project" / "Resume"
   d) Wait for status to change to ACTIVE_HEALTHY
 
@@ -26,7 +26,7 @@ STEP 2 — Re-run Expo prebuild
 New native packages were added (Sentry). The native Android/iOS project
 must be regenerated or the app will crash.
 
-  a) Open terminal in e:\Builds\EarnScroll
+  a) Open terminal in e:\Builds\Kenri
   b) Run: npx expo prebuild --clean
   c) Then rebuild your dev client:
        Android: npm run android
@@ -47,7 +47,7 @@ builds succeed but Sentry stack traces will be unreadable (minified).
   Option B (EAS builds): add as an EAS secret
     Run: eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value <your_token>
 
-  Your token is already in e:\Builds\EarnScroll\.env — copy it from there.
+  Your token is already in e:\Builds\Kenri\.env — copy it from there.
 
 
 ===============================
@@ -58,7 +58,7 @@ STEP 4 — Create Supabase database tables
 ------------------------------------------
 (Do this after Step 1 — project must be active first)
 
-Go to Supabase dashboard → EarnScroll project → SQL Editor
+Go to Supabase dashboard → Kenri project → SQL Editor
 Run the following SQL:
 
 -- Table 1: analytics_consent
@@ -128,7 +128,7 @@ CREATE POLICY "Users can manage own sessions" ON user_sessions
 
 STEP 5 — Configure Supabase Auth providers
 -------------------------------------------
-Go to Supabase dashboard → EarnScroll project → Authentication → Providers
+Go to Supabase dashboard → Kenri project → Authentication → Providers
 
   a) EMAIL/PASSWORD
      - Should be enabled by default
@@ -162,16 +162,16 @@ STEP 6 — Decide on withAppBlocker plugin
 Two accessibility-service plugins exist but only one is registered in app.json.
 
   Situation:
-  - plugins/withEarnScrollNative.js  → REGISTERED in app.json (injects BlockerService)
+  - plugins/withKenriNative.js  → REGISTERED in app.json (injects BlockerService)
   - plugins/withAppBlocker.js        → NOT registered (would inject AppBlockerService)
   - Both do similar things — having both would register two accessibility services
 
   Decision options:
-    Option A (recommended): Keep only withEarnScrollNative (already registered).
+    Option A (recommended): Keep only withKenriNative (already registered).
       → Delete plugins/withAppBlocker.js and native-src/ folder if unused.
 
     Option B: Switch to withAppBlocker.
-      → Add "./plugins/withAppBlocker" to app.json plugins array, remove withEarnScrollNative,
+      → Add "./plugins/withAppBlocker" to app.json plugins array, remove withKenriNative,
         re-run prebuild.
 
     Option C: Keep both (not recommended — two accessibility services for same purpose).
@@ -222,15 +222,15 @@ Use a release/preview build for this test.
 
   [ ] Accept diagnostics consent
   [ ] Trigger a test error
-  [ ] Check https://vs3dman.sentry.io/issues/ for the EarnScroll project
+  [ ] Check https://vs3dman.sentry.io/issues/ for the Kenri project
   [ ] Stack trace should be readable (not minified) — confirms sourcemap upload works
 
 STEP 11 — Test app blocker on Android
 ---------------------------------------
   [ ] Install on real Android device (emulator won't work for accessibility)
-  [ ] App prompts to enable accessibility service → open Settings → enable EarnScroll
+  [ ] App prompts to enable accessibility service → open Settings → enable Kenri
   [ ] Earn some minutes, then let them run out (or set to 0 in dev mode)
-  [ ] Open a blocked app → EarnScroll should intercept it
+  [ ] Open a blocked app → Kenri should intercept it
 
 STEP 12 — Review privacy policy + terms of service
 ----------------------------------------------------
@@ -244,7 +244,7 @@ The app declares android.permission.QUERY_ALL_PACKAGES in app.json.
 Google requires a written justification at Play Console submission time.
 
   Prepare text like:
-  "EarnScroll requires QUERY_ALL_PACKAGES to enumerate all installed apps
+  "Kenri requires QUERY_ALL_PACKAGES to enumerate all installed apps
   so users can select which apps to block when their earned screen time runs out.
   This is the core functionality of the app's parental/self-control feature."
 
@@ -260,7 +260,7 @@ BLOCKING  |  2   | Run expo prebuild --clean after Sentry install
 BLOCKING  |  3   | Export SENTRY_AUTH_TOKEN at build time
 NEEDED    |  4   | Create 4 analytics tables in Supabase with RLS
 NEEDED    |  5   | Configure Auth providers + redirect URL in Supabase
-NEEDED    |  6   | Decide withAppBlocker vs withEarnScrollNative (one or both?)
+NEEDED    |  6   | Decide withAppBlocker vs withKenriNative (one or both?)
 NEEDED    |  7   | Set up eas.json + signing (before store submission)
 VERIFY    |  8   | Test auth flows end-to-end
 VERIFY    |  9   | Test analytics consent flow + table writes

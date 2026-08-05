@@ -1,13 +1,13 @@
-# EarnScroll — Problem Statement & Product Context
+# Kenri — Problem Statement & Product Context
 
 > For use in market validation, research, and advisory conversations.
 > Last updated: June 30, 2026.
 
 ---
 
-## What EarnScroll Is
+## What Kenri Is
 
-EarnScroll is a mobile app (Android-first, iOS planned) that makes users **earn their screen time through physical exercise**. Users do squats, pushups, or planks in front of their phone camera; an on-device AI model counts reps in real time and credits earned minutes to a "Time Bank." Those minutes are spent when the user opens apps they've designated as distracting — when the bank hits zero, those apps are blocked until the user exercises again.
+Kenri is a mobile app (Android-first, iOS planned) that makes users **earn their screen time through physical exercise**. Users do squats, pushups, or planks in front of their phone camera; an on-device AI model counts reps in real time and credits earned minutes to a "Time Bank." Those minutes are spent when the user opens apps they've designated as distracting — when the bank hits zero, those apps are blocked until the user exercises again.
 
 **Tagline**: *Earn Your Screen Time.*
 
@@ -38,7 +38,7 @@ This is positive reinforcement, not restriction. The user never feels punished �
 | **1. Onboarding** | User picks one free exercise (squats, pushups, or planks). Pro users get all three. |
 | **2. Workout** | User opens the Workout tab, starts the camera. On-device AI (MoveNet via TFLite) detects the exercise and counts reps/hold-time automatically. |
 | **3. Earn** | Reps are converted to minutes via configurable earning ratios (e.g., 1 squat = 1 minute). Minutes are added to the Time Bank. |
-| **4. Block** | User selects which installed apps to put behind the blocker (the "Targets" list). When the Time Bank is empty and a targeted app is opened, EarnScroll's accessibility service shows a block overlay. |
+| **4. Block** | User selects which installed apps to put behind the blocker (the "Targets" list). When the Time Bank is empty and a targeted app is opened, Kenri's accessibility service shows a block overlay. |
 | **5. Spend** | When the Time Bank has minutes, blocked apps open normally. Time is deducted as the user uses them. |
 | **6. Streak** | Consecutive workout days are tracked. Streaks create social-pressure-like motivation without needing other users. |
 | **7. Emergency Access** | 3 daily "get out of jail free" presses grant 5 free minutes each, so the user is never truly locked out. |
@@ -102,14 +102,14 @@ Payments are not yet live. The billing service is a typed stub (`services/billin
 
 ## Competitive Landscape
 
-| Category | Examples | How they differ from EarnScroll |
+| Category | Examples | How they differ from Kenri |
 |---|---|---|
 | Screen-time limiters | iOS Screen Time, Opal, one sec, Digital Wellbeing | Restriction-focused. Negative framing. Users override or uninstall. |
 | Gamified fitness | Zombies Run!, Ring Fit Adventure | Story/game-driven. No real-world reward tied to daily device usage. |
 | Move-to-earn | Sweatcoin, StepN | Walking/step-based. Crypto/points economy, not screen time. |
 | Generic fitness | Strava, Nike Run Club, Hevy | Pure tracking. No external incentive system. |
 
-**EarnScroll's differentiation**: It is the only product that uses *the thing people already feel guilty about* (screen time) as the direct reward for *the thing they know they should do more of* (exercise). The behavior loop is closed within a single app.
+**Kenri's differentiation**: It is the only product that uses *the thing people already feel guilty about* (screen time) as the direct reward for *the thing they know they should do more of* (exercise). The behavior loop is closed within a single app.
 
 ---
 

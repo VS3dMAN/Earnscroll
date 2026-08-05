@@ -1,10 +1,10 @@
-# EarnScroll - Complete Product Context
+# Kenri - Complete Product Context
 
-> **📋 Purpose**: This document provides comprehensive context about EarnScroll for AI assistants, product discussions, and brainstorming sessions. It contains everything needed to understand the app's vision, current state, and future direction.
+> **📋 Purpose**: This document provides comprehensive context about Kenri for AI assistants, product discussions, and brainstorming sessions. It contains everything needed to understand the app's vision, current state, and future direction.
 
 ## 🎯 Executive Summary
 
-**EarnScroll (Screen-Time Gym)** is a fitness gamification mobile app that flips the script on screen time: instead of limiting it, users *earn* it by exercising. Using AI-powered computer vision (web) or manual tracking, users perform squats, pushups, and planks to accumulate minutes that they can "spend" on their devices.
+**Kenri (Screen-Time Gym)** is a fitness gamification mobile app that flips the script on screen time: instead of limiting it, users *earn* it by exercising. Using AI-powered computer vision (web) or manual tracking, users perform squats, pushups, and planks to accumulate minutes that they can "spend" on their devices.
 
 ### The Core Loop
 1. **Earn**: Do exercises → AI counts reps → Minutes added to Time Bank
@@ -484,7 +484,7 @@ Resume if form corrects
 ## 🤝 How to Use This Document
 
 ### For AI Assistants
-Use this document to understand EarnScroll's complete context when:
+Use this document to understand Kenri's complete context when:
 - Brainstorming new features or improvements
 - Discussing product strategy or positioning
 - Debugging issues or proposing solutions

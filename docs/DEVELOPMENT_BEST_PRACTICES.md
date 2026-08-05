@@ -2,7 +2,7 @@
 
 ## 🎯 Core Principles
 
-This document outlines the coding standards, patterns, and practices used throughout the EarnScroll project. Following these guidelines ensures consistency, maintainability, and quality.
+This document outlines the coding standards, patterns, and practices used throughout the Kenri project. Following these guidelines ensures consistency, maintainability, and quality.
 
 ## 📝 TypeScript Standards
 

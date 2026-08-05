@@ -1,4 +1,4 @@
-# EarnScroll — Sentry + EAS Setup: Full Explainer
+# Kenri — Sentry + EAS Setup: Full Explainer
 *Written 2026-06-29. Assumes zero prior knowledge.*
 
 ---

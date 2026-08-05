@@ -2,7 +2,7 @@
 
 ## 💰 Business Model Overview
 
-EarnScroll operates on a **freemium model** with clear value differentiation between Free and Pro tiers. This document details the implementation, gating strategies, and lessons learned.
+Kenri operates on a **freemium model** with clear value differentiation between Free and Pro tiers. This document details the implementation, gating strategies, and lessons learned.
 
 ## 🎯 Feature Comparison
 

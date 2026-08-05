@@ -1,16 +1,16 @@
 ================================================================================
-EARNSCROLL — COMPLETE ANDROID SETUP GUIDE
+KENRI — COMPLETE ANDROID SETUP GUIDE
 ================================================================================
 
 WHAT THIS FILE IS ABOUT
 ------------------------
-This document is a complete, step-by-step guide for setting up the EarnScroll
+This document is a complete, step-by-step guide for setting up the Kenri
 project from a zip file on a new Windows machine and getting the app running on
 a physical Android phone. It is written so that Claude Opus (or any developer)
 can follow it top-to-bottom with zero prior context and arrive at a working,
 testable build on an Android device.
 
-EarnScroll is a React Native app built with Expo SDK 54 and expo-dev-client.
+Kenri is a React Native app built with Expo SDK 54 and expo-dev-client.
 It uses native Android modules (camera, TFLite pose estimation, accessibility
 service) which means it CANNOT run on Expo Go. You MUST build a custom dev
 client (which this guide covers). The android/ folder is included in the zip
@@ -35,7 +35,7 @@ After install, verify in a NEW terminal window:
 ------------------------------------------------------------------------
 1.2  JDK 17 (Java Development Kit)
 ------------------------------------------------------------------------
-EarnScroll requires JDK 17 exactly. Android tooling does not work with JDK 21+.
+Kenri requires JDK 17 exactly. Android tooling does not work with JDK 21+.
 
 Download Temurin JDK 17 (free, from Adoptium):
     https://adoptium.net/temurin/releases/?version=17
@@ -141,16 +141,16 @@ SECTION 3 — EXTRACTING AND PREPARING THE PROJECT
 ================================================================================
 
 Step 1 — Extract the zip:
-  Extract the EarnScroll zip to a short path to avoid Windows path length issues.
-  Recommended: C:\Dev\EarnScroll   or   E:\Builds\EarnScroll
+  Extract the Kenri zip to a short path to avoid Windows path length issues.
+  Recommended: C:\Dev\Kenri   or   E:\Builds\Kenri
 
-  IMPORTANT: Avoid paths with spaces (e.g., "My Documents\EarnScroll" will
+  IMPORTANT: Avoid paths with spaces (e.g., "My Documents\Kenri" will
   cause Gradle build failures).
 
 Step 2 — Open a terminal in the project root:
   Open Command Prompt or Git Bash.
   Navigate to the project folder:
-    cd C:\Dev\EarnScroll        (or wherever you extracted it)
+    cd C:\Dev\Kenri        (or wherever you extracted it)
 
 Step 3 — Install Node dependencies:
     npm install
@@ -206,7 +206,7 @@ Step 3 — First launch on device:
 
   For Accessibility Service:
     - The app will prompt you to go to Settings > Accessibility
-    - Find "EarnScroll" in the list and enable it
+    - Find "Kenri" in the list and enable it
     - This is required for the app blocker feature to work
 
 Step 4 — Onboarding:
@@ -338,7 +338,7 @@ After prebuild:
 SECTION 9 — PROJECT STRUCTURE OVERVIEW (FOR CLAUDE)
 ========================================================================
 
-EarnScroll/
+Kenri/
 ├── app/                    # Expo Router screens (file-based routing)
 │   ├── (tabs)/             # Main tab screens: index (Dashboard), workout, targets
 │   ├── onboarding.tsx      # First-run screen to pick free exercise
@@ -359,7 +359,7 @@ EarnScroll/
 │
 ├── plugins/
 │   ├── withAppBlocker.js   # Expo config plugin: copies native-src/ Kotlin files
-│   └── withEarnScrollNative.js  # Expo config plugin: generates EarnScrollModule,
+│   └── withKenriNative.js  # Expo config plugin: generates EarnScrollModule,
 │                                #   EarnScrollPackage, BlockerService inline
 │
 ├── native-src/android/     # Source Kotlin files for withAppBlocker plugin
@@ -459,7 +459,7 @@ NOTES FOR CLAUDE OPUS
   plugin (plugins/withAppBlocker.js) copies from it but will only warn if
   files are missing — it won't error out. The important native files
   (EarnScrollModule.kt, EarnScrollPackage.kt, BlockerService.kt) are
-  generated inline by withEarnScrollNative.js and already exist in the
+  generated inline by withKenriNative.js and already exist in the
   android/app/src/main/java/com/earnscroll/ directory.
 
 - If asked to add a new screen, add it as a file under app/ following
