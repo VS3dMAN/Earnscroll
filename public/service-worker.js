@@ -1,4 +1,4 @@
-const CACHE_NAME = 'earnscroll-v1.0.0';
+const CACHE_NAME = 'kenri-v1.0.0';
 const urlsToCache = [
   '/',
   '/manifest.json',
