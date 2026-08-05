@@ -72,9 +72,9 @@ class BlockedActivity : Activity() {
         }
         root.addView(subtitle)
 
-        // "Open EarnScroll" button
+        // "Open Kenri" button
         val openBtn = Button(this).apply {
-            text = "Open EarnScroll"
+            text = "Open Kenri"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
