@@ -30,6 +30,9 @@ export default function TermsOfServiceScreen() {
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>Last Updated: {LAST_UPDATED_DATE}</Text>
+          <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>
+            Effective [DATE]: this application was formerly published as EarnScroll. The name has changed; the operating entity, data practices, and these terms are unchanged.
+          </Text>
 
           {!WEB_LEGAL_HOSTED && (
             <View style={[styles.banner, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '55' }]}>
@@ -41,7 +44,7 @@ export default function TermsOfServiceScreen() {
 
           <H theme={theme}>1. Acceptance &amp; Eligibility</H>
           <P theme={theme}>
-            By creating an account or using EarnScroll, you agree to these Terms. You must be at least 13 years old to use the App. If you are under the age of majority in your jurisdiction, you confirm you have a parent or guardian's consent.
+            By creating an account or using Kenri (formerly EarnScroll), you agree to these Terms. You must be at least 13 years old to use the App. If you are under the age of majority in your jurisdiction, you confirm you have a parent or guardian's consent.
           </P>
 
           <H theme={theme}>2. License</H>
@@ -72,12 +75,12 @@ export default function TermsOfServiceScreen() {
 
           <H theme={theme}>6. Health &amp; Fitness Disclaimer</H>
           <P theme={theme}>
-            EarnScroll is a fitness and screen-time tool. It is NOT medical advice and does NOT diagnose, treat, or prevent any condition. Consult a physician before starting any new exercise program, especially if you have a medical condition. You exercise at your own risk.
+            Kenri is a fitness and screen-time tool. It is NOT medical advice and does NOT diagnose, treat, or prevent any condition. Consult a physician before starting any new exercise program, especially if you have a medical condition. You exercise at your own risk.
           </P>
 
           <H theme={theme}>7. Limitation of Liability</H>
           <P theme={theme}>
-            To the maximum extent permitted by law, EarnScroll and its operators are not liable for any indirect, incidental, consequential, or punitive damages, or for any loss of data, profits, or goodwill, arising out of or in connection with your use of the App. Our aggregate liability for any direct damages will not exceed INR 1,000.
+            To the maximum extent permitted by law, Kenri and its operators are not liable for any indirect, incidental, consequential, or punitive damages, or for any loss of data, profits, or goodwill, arising out of or in connection with your use of the App. Our aggregate liability for any direct damages will not exceed INR 1,000.
           </P>
 
           <H theme={theme}>8. Termination</H>
