@@ -1,3 +1,5 @@
+> Historical document. Written when the app was named EarnScroll (now Kenri).
+
 # EarnScroll — Comprehensive App Report for Legal Documentation
 
 **Prepared for**: Privacy Policy, Terms of Service, and Regulatory Compliance Pages  

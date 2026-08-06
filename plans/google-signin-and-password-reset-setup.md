@@ -54,10 +54,10 @@ them up is the usual reason this fails.
 ## Step G1 — Create the Google OAuth client
 
 1. Go to <https://console.cloud.google.com/>
-2. Create a project (or pick an existing one). Name it e.g. `EarnScroll`.
+2. Create a project (or pick an existing one). Name it e.g. `Kenri`.
 3. **APIs & Services → OAuth consent screen**
    - User type: **External**
-   - App name: `EarnScroll`
+   - App name: `Kenri`
    - User support email: your email
    - Developer contact email: your email
    - Scopes: the defaults (`email`, `profile`, `openid`) are all you need —
@@ -69,7 +69,7 @@ them up is the usual reason this fails.
    - Application type: **Web application** ← this is the important bit.
      Not "Android", not "iOS". Supabase performs the exchange server-side and
      needs a client *secret*, which the Android/iOS client types do not issue.
-   - Name: `EarnScroll Supabase`
+   - Name: `Kenri Supabase`
    - **Authorized redirect URIs** → Add URI:
 
      ```
@@ -233,7 +233,7 @@ indistinguishable from "password reset is broken" for your users.
    | Field | Value |
    |---|---|
    | Sender email | `noreply@earnscroll.app` |
-   | Sender name | `EarnScroll` |
+   | Sender name | `Kenri` |
    | Host | `smtp.resend.com` |
    | Port | `465` |
    | Username | `resend` |
@@ -253,7 +253,7 @@ carry the app's redirect.
 3. Make sure the link uses `{{ .ConfirmationURL }}`:
 
 ```html
-<h2>Reset your EarnScroll password</h2>
+<h2>Reset your Kenri password</h2>
 <p>Tap the button below to choose a new password. This link expires in 1 hour.</p>
 <p><a href="{{ .ConfirmationURL }}">Reset password</a></p>
 <p>If you didn't request this, you can safely ignore this email.</p>

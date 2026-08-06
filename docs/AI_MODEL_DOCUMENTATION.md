@@ -2,7 +2,7 @@
 
 ## 🧠 Overview
 
-EarnScroll uses **TensorFlow.js** and **MoveNet** for real-time pose estimation to detect and count exercises (currently implemented for web via browser APIs; native camera integration is not yet implemented). This document provides comprehensive details about the AI implementation, fine-tuning, and lessons learned.
+Kenri uses **TensorFlow.js** and **MoveNet** for real-time pose estimation to detect and count exercises (currently implemented for web via browser APIs; native camera integration is not yet implemented). This document provides comprehensive details about the AI implementation, fine-tuning, and lessons learned.
 
 ## 📦 Technology Stack
 

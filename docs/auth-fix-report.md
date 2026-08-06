@@ -1,7 +1,7 @@
 # Auth diagnosis & fix report
 
 Date: 2026-08-05
-Supabase project: `zurahjqghjratswjjpsg` (EarnScroll, ap-northeast-1)
+Supabase project: `zurahjqghjratswjjpsg` (Kenri, ap-northeast-1)
 
 ---
 

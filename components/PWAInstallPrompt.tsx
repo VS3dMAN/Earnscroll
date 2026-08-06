@@ -101,11 +101,11 @@ export default function PWAInstallPrompt() {
           <Download size={40} color="#4F46E5" />
         </View>
 
-        <Text style={styles.title}>Install EarnScroll</Text>
+        <Text style={styles.title}>Install Kenri</Text>
         <Text style={styles.description}>
           {isIOS
             ? 'Install this app on your home screen for quick and easy access. Tap the Share button, then "Add to Home Screen".'
-            : 'Install EarnScroll on your device for quick access and offline functionality.'
+            : 'Install Kenri on your device for quick access and offline functionality.'
           }
         </Text>
 

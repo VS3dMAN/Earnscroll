@@ -34,6 +34,9 @@ export default function PrivacyPolicyScreen() {
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>Last Updated: {LAST_UPDATED_DATE}</Text>
+          <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>
+            Effective [DATE]: this application was formerly published as EarnScroll. The name has changed; the operating entity, data practices, and these terms are unchanged.
+          </Text>
 
           {!WEB_LEGAL_HOSTED && (
             <View style={[styles.banner, { backgroundColor: theme.primary + '14', borderColor: theme.primary + '55' }]}>
@@ -45,7 +48,7 @@ export default function PrivacyPolicyScreen() {
 
           <H theme={theme}>1. Who We Are</H>
           <P theme={theme}>
-            EarnScroll ("we", "our", "us") publishes the EarnScroll: Screen-Time Gym mobile application ("the App"). For any privacy questions you can reach us at{' '}
+            Kenri (formerly EarnScroll) ("we", "our", "us") publishes the Kenri: Screen-Time Gym mobile application ("the App"). For any privacy questions you can reach us at{' '}
             <A theme={theme} email={LEGAL_CONTACT.privacy}>{LEGAL_CONTACT.privacy}</A>.
           </P>
 
@@ -120,7 +123,7 @@ export default function PrivacyPolicyScreen() {
 
           <H theme={theme}>9. Children</H>
           <P theme={theme}>
-            EarnScroll is intended for users 13 and older. We do not knowingly collect data from anyone under 13, and we do not show targeted advertising to minors.
+            Kenri is intended for users 13 and older. We do not knowingly collect data from anyone under 13, and we do not show targeted advertising to minors.
           </P>
 
           <H theme={theme}>10. Security</H>

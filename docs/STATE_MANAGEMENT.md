@@ -2,7 +2,7 @@
 
 ## 🏗️ Overview
 
-EarnScroll uses a **dual-context hybrid state management** approach combining:
+Kenri uses a **dual-context hybrid state management** approach combining:
 1. **TimeBank Context** (`@nkzw/create-context-hook`) for app-wide workout data
 2. **Theme Context** (`@nkzw/create-context-hook`) for theme preferences
 3. **AsyncStorage** for persistence

@@ -519,7 +519,7 @@ export default function NativeWorkoutCamera() {
                 <View style={styles.prePermCard}>
                     <Text style={styles.prePermTitle}>Use camera to count reps</Text>
                     <Text style={styles.prePermBody}>
-                        EarnScroll uses your camera to count your reps in real time. Frames are processed on-device only — nothing is uploaded, saved, or shared.
+                        Kenri uses your camera to count your reps in real time. Frames are processed on-device only — nothing is uploaded, saved, or shared.
                     </Text>
                     <View style={styles.prePermActions}>
                         <TouchableOpacity

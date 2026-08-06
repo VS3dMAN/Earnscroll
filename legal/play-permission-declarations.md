@@ -5,13 +5,18 @@ Paste each block verbatim into the matching declaration form in Play Console
 
 Last reviewed: May 21, 2026.
 
+The app is published as **Kenri** (formerly EarnScroll). The Play package name
+`com.earnscroll_earnyourscreentime.app` and the accessibility service component
+`com.earnscroll.BlockerService` intentionally retain the original identifiers so
+existing installs and granted permissions are preserved across the rename.
+
 ---
 
 ## 1. QUERY_ALL_PACKAGES
 
 **Why does your app need this permission?**
 
-EarnScroll's core feature lets users pick which installed apps to block when
+Kenri's core feature lets users pick which installed apps to block when
 their earned-time bank is empty. To present a complete picker UI, we query the
 device's installed apps using `PackageManager.queryIntentActivities` for
 `Intent.ACTION_MAIN` + `CATEGORY_LAUNCHER`. The full list never leaves the
@@ -56,8 +61,8 @@ becomes enabled. The disclosure timestamp is persisted on-device in
 - The in-app disclosure screen (full screen, scrollable, listing what is
   and is not accessed).
 - The checkbox being toggled on, then "Open Settings" tapped.
-- Android Settings → Accessibility → EarnScroll being enabled.
-- Returning to the app; opening a blocked app; the EarnScroll block screen
+- Android Settings → Accessibility → Kenri being enabled.
+- Returning to the app; opening a blocked app; the Kenri block screen
   appearing.
 - Earning time via a workout; the block screen no longer appearing.
 
@@ -67,9 +72,9 @@ becomes enabled. The disclosure timestamp is persisted on-device in
 
 **Why does your app need this permission?**
 
-EarnScroll uses `SYSTEM_ALERT_WINDOW` to display the "App Blocked" overlay
+Kenri uses `SYSTEM_ALERT_WINDOW` to display the "App Blocked" overlay
 on top of the blocked app's surface when the user has zero earned minutes
-remaining. The overlay shows two actions: open EarnScroll, or go home.
+remaining. The overlay shows two actions: open Kenri, or go home.
 
 If we determine `BlockedActivity` (full-screen activity launched via
 `Intent.FLAG_ACTIVITY_NEW_TASK`) is sufficient, this permission can be
@@ -80,7 +85,7 @@ where the activity launch is delayed.
 **Demo video must show**:
 - A blocked app being opened with zero earned minutes.
 - The block overlay appearing on top of the blocked app.
-- The user tapping "Open EarnScroll" → leaving the blocked app.
+- The user tapping "Open Kenri" → leaving the blocked app.
 
 ---
 
@@ -88,7 +93,7 @@ where the activity launch is delayed.
 
 **Why does your app need this permission?**
 
-EarnScroll uses `UsageStatsManager` only to display the user's own daily
+Kenri uses `UsageStatsManager` only to display the user's own daily
 usage breakdown for the apps they have already chosen to block. The total
 time spent in blocked apps is shown on the Dashboard so the user can see
 how their earned time is being spent. We do NOT use usage stats to derive

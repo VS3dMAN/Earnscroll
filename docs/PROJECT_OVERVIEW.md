@@ -1,8 +1,8 @@
-# EarnScroll - Project Overview
+# Kenri - Project Overview
 
 ## 🎯 Project Description
 
-**EarnScroll** (also known as "Screen-Time Gym") is a fitness gamification mobile application that allows users to earn screen time by completing physical exercises. The app features AI-powered computer vision (web-only) to detect and count exercises in real-time through the device's camera.
+**Kenri** (also known as "Screen-Time Gym") is a fitness gamification mobile application that allows users to earn screen time by completing physical exercises. The app features AI-powered computer vision (web-only) to detect and count exercises in real-time through the device's camera.
 
 ## 📋 Core Concept
 

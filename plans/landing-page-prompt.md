@@ -1,4 +1,4 @@
-Build a modern, high-converting marketing landing page and legal document website for **EarnScroll: Screen-Time Gym** — a mobile app that makes users earn their screen time through physical exercise.
+Build a modern, high-converting marketing landing page and legal document website for **Kenri: Screen-Time Gym** — a mobile app that makes users earn their screen time through physical exercise.
 
 ### Site Overview
 
@@ -20,7 +20,7 @@ This is a single website with:
 ## BRAND & DESIGN SYSTEM
 
 ### Brand Identity
-- **App name**: EarnScroll: Screen-Time Gym
+- **App name**: Kenri: Screen-Time Gym
 - **Tagline**: "Earn Your Screen Time"
 - **Hero copy**: "Turn Exercise into Currency. Work out → Earn minutes → Guilt-free scrolling."
 - **CTA text**: "Download on Google Play" (primary), "Learn More" (secondary scroll)
@@ -67,7 +67,7 @@ The site should default to **dark mode** to match the app's premium industrial a
 ## LANDING PAGE SECTIONS (in order)
 
 ### 1. Navigation Bar
-- Logo/app name on the left ("EarnScroll" with a small lightning bolt ⚡ icon)
+- Logo/app name on the left ("Kenri" with a small lightning bolt ⚡ icon)
 - Nav links: Features, How It Works, Pricing, FAQ
 - "Download" CTA button (cyan, links to Play Store or `#download`)
 - Sticky on scroll, with backdrop blur
@@ -75,7 +75,7 @@ The site should default to **dark mode** to match the app's premium industrial a
 
 ### 2. Hero Section
 - **Headline**: "Earn Your Screen Time"
-- **Subheadline**: "Do exercises. Earn minutes. Scroll guilt-free. EarnScroll turns physical workouts into screen time currency — tracked by AI, verified by your camera."
+- **Subheadline**: "Do exercises. Earn minutes. Scroll guilt-free. Kenri turns physical workouts into screen time currency — tracked by AI, verified by your camera."
 - **Primary CTA**: "Get it on Google Play" button (with Play Store badge icon)
 - **Secondary CTA**: "See How It Works" (scrolls to How It Works section)
 - **Visual**: Show the dashboard screenshot inside a phone mockup frame, slightly angled, with a subtle cyan glow behind it. If you can animate the phone floating gently, do it.
@@ -87,10 +87,10 @@ The site should default to **dark mode** to match the app's premium industrial a
   1. **📱 Guilt Loop**: "You scroll for hours, feel guilty, promise to stop… then do it again tomorrow. Sound familiar?"
   2. **🏋️ Motivation Gap**: "You know you should exercise, but there's no immediate reward. The gym can wait… again."
   3. **🔄 The Missing Link**: "What if the thing you feel guilty about could become the reward for the thing you keep putting off?"
-- Transition line: "EarnScroll closes the loop."
+- Transition line: "Kenri closes the loop."
 
 ### 4. How It Works
-- **Section title**: "How EarnScroll Works"
+- **Section title**: "How Kenri Works"
 - Four steps, each with an icon/illustration and a screenshot:
 
 **Step 1: Choose Your Exercise**
@@ -162,19 +162,19 @@ Two-column layout:
 - Accordion-style FAQ:
 
 **Q: Is the AI exercise tracking accurate?**
-A: EarnScroll uses Google's MoveNet model running entirely on your device. It tracks joint angles to count reps and detect form. It's accurate enough to count honest reps and ignore half-reps — but it's not a personal trainer. We're continuously improving detection thresholds.
+A: Kenri uses Google's MoveNet model running entirely on your device. It tracks joint angles to count reps and detect form. It's accurate enough to count honest reps and ignore half-reps — but it's not a personal trainer. We're continuously improving detection thresholds.
 
-**Q: Does EarnScroll upload my camera feed?**
+**Q: Does Kenri upload my camera feed?**
 A: No. Camera frames are processed by the on-device AI model and immediately discarded. Nothing is saved, uploaded, or shared. Ever.
 
 **Q: What happens if I need my phone urgently?**
 A: You get 3 Emergency Access passes per day. Each grants 5 free minutes instantly. You're never truly locked out of your phone.
 
 **Q: Which apps can I block?**
-A: Any app installed on your device. You choose exactly which apps go behind the exercise wall. System apps and EarnScroll itself are excluded.
+A: Any app installed on your device. You choose exactly which apps go behind the exercise wall. System apps and Kenri itself are excluded.
 
 **Q: Does the app blocker work on iOS?**
-A: The app blocker is currently Android-only. iOS doesn't allow third-party apps to block other apps. On iOS, EarnScroll works as a workout tracker and time bank — the earn side works, but the block side requires Android.
+A: The app blocker is currently Android-only. iOS doesn't allow third-party apps to block other apps. On iOS, Kenri works as a workout tracker and time bank — the earn side works, but the block side requires Android.
 
 **Q: Can I change my free exercise later?**
 A: Free users choose one exercise during setup. To switch or unlock all three, upgrade to Pro.
@@ -183,20 +183,20 @@ A: Free users choose one exercise during setup. To switch or unlock all three, u
 A: Currently, all data is stored locally on your device. Cloud sync is coming soon. For now, your data stays on your phone.
 
 **Q: How do I cancel Pro?**
-A: Pro subscriptions are managed through Google Play. Go to Play Store → Subscriptions → EarnScroll to cancel anytime.
+A: Pro subscriptions are managed through Google Play. Go to Play Store → Subscriptions → Kenri to cancel anytime.
 
 ### 9. Final CTA Section
 - Large, full-width section with dark background and subtle cyan gradient
 - **Headline**: "Your Screen Time Should Cost You Something"
 - **Subheadline**: "And that something should make you healthier."
-- **CTA**: Large "Download EarnScroll" button → Play Store
+- **CTA**: Large "Download Kenri" button → Play Store
 - Below: "Free to start. No credit card needed."
 
 ### 10. Footer
-- **Left**: EarnScroll logo + "© 2026 EarnScroll. All rights reserved."
+- **Left**: Kenri logo + "© 2026 Kenri. All rights reserved."
 - **Middle**: Links — Privacy Policy, Terms of Service, Support
 - **Right**: Contact email — support@earnscroll.com
-- Small text: "EarnScroll is a fitness and screen-time tool. It is not medical advice. Consult a physician before starting any exercise program."
+- Small text: "Kenri is a fitness and screen-time tool. It is not medical advice. Consult a physician before starting any exercise program."
 
 ---
 
@@ -212,7 +212,7 @@ Privacy Policy
 Last Updated: May 21, 2026
 
 1. Who We Are
-EarnScroll ("we", "our", "us") publishes the EarnScroll: Screen-Time Gym mobile application ("the App"). For any privacy questions, email privacy@earnscroll.com.
+Kenri ("we", "our", "us") publishes the Kenri: Screen-Time Gym mobile application ("the App"). For any privacy questions, email privacy@earnscroll.com.
 
 2. Data We Collect
 We collect only what we need to make the App work and to keep it reliable.
@@ -256,7 +256,7 @@ Two of the most sensitive data flows — camera frames during workouts, and fore
 - Withdraw consent — toggle analytics or diagnostics off in Settings at any time.
 
 9. Children
-EarnScroll is intended for users 13 and older. We do not knowingly collect data from anyone under 13, and we do not show targeted advertising to minors.
+Kenri is intended for users 13 and older. We do not knowingly collect data from anyone under 13, and we do not show targeted advertising to minors.
 
 10. Security
 All data is encrypted in transit using TLS. Database data at rest is encrypted by Supabase (AES-256). On-device secure preferences (Android) are stored in EncryptedSharedPreferences (AES-256 GCM).
@@ -282,7 +282,7 @@ Terms of Service
 Last Updated: May 21, 2026
 
 1. Acceptance & Eligibility
-By creating an account or using EarnScroll, you agree to these Terms. You must be at least 13 years old to use the App. If you are under the age of majority in your jurisdiction, you confirm you have a parent or guardian's consent.
+By creating an account or using Kenri, you agree to these Terms. You must be at least 13 years old to use the App. If you are under the age of majority in your jurisdiction, you confirm you have a parent or guardian's consent.
 
 2. License
 We grant you a personal, non-exclusive, non-transferable, revocable license to use the App on devices you own or control. You may not sublicense, resell, or distribute the App.
@@ -301,10 +301,10 @@ You agree NOT to:
 Version 1.0 of the App is offered free of charge with no in-app purchases. Future versions may introduce an optional "Pro" tier processed exclusively through Google Play Billing; pricing and terms specific to that tier will be presented in-app before any purchase.
 
 6. Health & Fitness Disclaimer
-EarnScroll is a fitness and screen-time tool. It is NOT medical advice and does NOT diagnose, treat, or prevent any condition. Consult a physician before starting any new exercise program, especially if you have a medical condition. You exercise at your own risk.
+Kenri is a fitness and screen-time tool. It is NOT medical advice and does NOT diagnose, treat, or prevent any condition. Consult a physician before starting any new exercise program, especially if you have a medical condition. You exercise at your own risk.
 
 7. Limitation of Liability
-To the maximum extent permitted by law, EarnScroll and its operators are not liable for any indirect, incidental, consequential, or punitive damages, or for any loss of data, profits, or goodwill, arising out of or in connection with your use of the App. Our aggregate liability for any direct damages will not exceed INR 1,000.
+To the maximum extent permitted by law, Kenri and its operators are not liable for any indirect, incidental, consequential, or punitive damages, or for any loss of data, profits, or goodwill, arising out of or in connection with your use of the App. Our aggregate liability for any direct damages will not exceed INR 1,000.
 
 8. Termination
 You may terminate your account at any time via Settings → Delete Account. We may suspend or terminate your access if you violate these Terms or applicable law. On termination, your data is deleted as described in our Privacy Policy.
@@ -338,10 +338,10 @@ Simple page with:
 
 ### Homepage
 ```html
-<title>EarnScroll — Earn Your Screen Time Through Exercise</title>
-<meta name="description" content="EarnScroll turns physical exercise into screen time. Do squats, pushups, or planks — AI counts your reps — and earn minutes to use your favorite apps. Free on Android.">
+<title>Kenri — Earn Your Screen Time Through Exercise</title>
+<meta name="description" content="Kenri turns physical exercise into screen time. Do squats, pushups, or planks — AI counts your reps — and earn minutes to use your favorite apps. Free on Android.">
 <meta name="keywords" content="screen time, exercise app, fitness gamification, app blocker, earn screen time, AI workout, squats, pushups, planks, digital wellbeing">
-<meta property="og:title" content="EarnScroll — Earn Your Screen Time">
+<meta property="og:title" content="Kenri — Earn Your Screen Time">
 <meta property="og:description" content="Turn exercise into screen time currency. AI-powered rep counting. App blocking when your bank is empty.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="/og-image.png">
@@ -350,14 +350,14 @@ Simple page with:
 
 ### Privacy Policy
 ```html
-<title>Privacy Policy — EarnScroll</title>
-<meta name="description" content="EarnScroll privacy policy. Learn how we handle your data, camera access, and on-device processing.">
+<title>Privacy Policy — Kenri</title>
+<meta name="description" content="Kenri privacy policy. Learn how we handle your data, camera access, and on-device processing.">
 ```
 
 ### Terms of Service
 ```html
-<title>Terms of Service — EarnScroll</title>
-<meta name="description" content="EarnScroll terms of service. Usage terms, acceptable use, health disclaimer, and governing law.">
+<title>Terms of Service — Kenri</title>
+<meta name="description" content="Kenri terms of service. Usage terms, acceptable use, health disclaimer, and governing law.">
 ```
 
 ---

@@ -402,7 +402,7 @@ try {
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow EarnScroll to use your camera for exercise tracking."
+          "cameraPermission": "Allow Kenri to use your camera for exercise tracking."
         }
       ]
     ]

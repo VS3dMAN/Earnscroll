@@ -142,7 +142,7 @@ export default function TargetsScreen() {
         if (!enabled) {
           Alert.alert(
             'Enable App Blocker',
-            'EarnScroll needs accessibility access to block distracting apps when your time runs out. Please enable "EarnScroll" in the next screen.',
+            'Kenri needs accessibility access to block distracting apps when your time runs out. Please enable "Kenri" in the next screen.',
             [
               { text: 'Later', style: 'cancel' },
               {

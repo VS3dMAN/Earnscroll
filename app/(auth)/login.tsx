@@ -124,7 +124,7 @@ export default function LoginScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.logo, { color: accentColor }]}>EarnScroll</Text>
+          <Text style={[styles.logo, { color: accentColor }]}>Kenri</Text>
           <Text style={[styles.title, { color: textColor }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: textSecondary }]}>
             Sign in to sync your progress

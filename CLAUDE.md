@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-EarnScroll is a React Native mobile app (Expo SDK 52) that gamifies screen time: users earn minutes of app usage by completing real exercises (squats, pushups, planks). Exercise detection uses on-device TFLite pose estimation via the camera. On Android, an accessibility service blocks distracting apps when the user's time bank is depleted.
+Kenri is a React Native mobile app (Expo SDK 52) that gamifies screen time: users earn minutes of app usage by completing real exercises (squats, pushups, planks). Exercise detection uses on-device TFLite pose estimation via the camera. On Android, an accessibility service blocks distracting apps when the user's time bank is depleted.
 
 ## Commands
 
@@ -56,12 +56,13 @@ Light/dark/system theme support. Uses `@nkzw/create-context-hook`. Dark theme us
 
 ### Native Android Plugins
 
-Two Expo config plugins generate and inject native Kotlin code at prebuild time:
+One Expo config plugin generates and injects native Kotlin code at prebuild time:
 
-- **`plugins/withAppBlocker.js`** — Copies Kotlin files from `native-src/android/` into the Android project. Registers an `AppBlockerService` (accessibility service) in AndroidManifest.
-- **`plugins/withEarnScrollNative.js`** — Generates Kotlin source inline (doesn't read from `native-src/`). Creates `EarnScrollModule` (React Native bridge for getting installed apps, setting blocked packages, updating minutes), `EarnScrollPackage`, and `BlockerService`. Injects into `MainApplication.kt`.
+- **`plugins/withKenriNative.js`** — Generates Kotlin source inline. Creates `EarnScrollModule` (React Native bridge for getting installed apps, setting blocked packages, updating minutes), `EarnScrollPackage`, `BlockerService` (accessibility service), and `BlockedActivity` (the full-screen block UI). Registers the service in AndroidManifest and injects `EarnScrollPackage` into `MainApplication.kt`.
 
-Note: Both plugins register accessibility services — `withAppBlocker` registers `AppBlockerService` and `withEarnScrollNative` registers `BlockerService` (under `com.earnscroll` package).
+**The `com.earnscroll` package path and the `EarnScroll*` class names are frozen and must never be renamed.** Android binds a user's granted accessibility permission to the fully-qualified component name `com.earnscroll/.BlockerService`; renaming it silently invalidates that grant for every existing install. The same applies to the `EarnScrollSecurePrefs` EncryptedSharedPreferences store, which holds the time-bank balance and blocked-package list. These identifiers are invisible to users and load-bearing — the app's display name is Kenri, but its internal namespace stays `earnscroll`.
+
+Note: `native-src/` is empty and `plugins/withAppBlocker.js` no longer exists; `withKenriNative.js` is the only config plugin generating native code.
 
 ### Babel/Metro Configuration
 
